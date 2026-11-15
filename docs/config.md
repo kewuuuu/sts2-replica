@@ -14,7 +14,7 @@
 | 键 | 类型 | 默认 | 说明 |
 | --- | --- | --- | --- |
 | `charge_required` | int | 3 | 充能满阈值 a，`< 1` 时回落默认 |
-| `offer_count` | int | 2 | 取样候选数量 b，钳制到 1..3（`CardSelectCmd.FromSimpleGridForRewards` 与卡牌奖励界面都只支持有限数量） |
+| `offer_count` | int | 2 | 取样候选数量 b，钳制到 1..3。`CardSelectCmd.FromSimpleGridForRewards` 本身没有张数上限（≤3 属于 `FromChooseACardScreen`，本项目未使用），钳制理由是网格选牌 UI 在 b>3 时未经实机验证，属保守值 |
 | `weight_common` | int | 6 | 白卡权重；基础牌算白卡 |
 | `weight_uncommon` | int | 4 | 蓝卡权重 |
 | `weight_rare` | int | 2 | 金卡权重 |

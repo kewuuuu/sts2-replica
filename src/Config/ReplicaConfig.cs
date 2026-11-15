@@ -9,6 +9,10 @@ namespace Sts2Replica.Config;
 /// </summary>
 public sealed class ReplicaConfig
 {
+	/// <summary>
+	/// Upper bound for the candidate count. <c>CardSelectCmd.FromSimpleGridForRewards</c> imposes no count limit of
+	/// its own; 1..3 is kept because the grid selection UI with more than three offers is unverified in game.
+	/// </summary>
 	public const int OfferCountMax = 3;
 	public const int DefaultChargeRequired = 3;
 	public const int DefaultOfferCount = 2;

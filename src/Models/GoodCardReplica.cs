@@ -115,7 +115,16 @@ public sealed class GoodCardReplica : RelicModel
 			}
 			foreach (CardModel card in picked)
 			{
-				CardCmd.PreviewCardPileAdd(await CardPileCmd.Add(card, PileType.Deck));
+				CardPileAddResult added = await CardPileCmd.Add(card, PileType.Deck);
+				if (!added.success)
+				{
+					// A failed deck add means the player keeps nothing (CardReward.cs:279-281 only continues on
+					// success), so the charge must not be spent for it.
+					Charges = previous;
+					Log.Error($"[sts2-replica] sampled card {card.Id} was not added to the deck (success=false); charge restored to {previous}.");
+					return;
+				}
+				CardCmd.PreviewCardPileAdd(added);
 			}
 		}
 		catch (Exception exception)
