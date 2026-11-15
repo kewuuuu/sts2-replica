@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>sts2-replica</AssemblyName>
+    <RootNamespace>Sts2Replica</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <DebugType>portable</DebugType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GameDataDir Condition="'$(GameDataDir)' == ''">D:\software\steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64</GameDataDir>
+    <ModId>sts2-replica</ModId>
+    <ModDistDir>$(MSBuildProjectDirectory)\dist\$(ModId)</ModDistDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- scratch/verification projects and staged output must never join the mod's compile set -->
+    <Compile Remove="_tmp/**" />
+    <Compile Remove="dist/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="sts2">
+      <HintPath>$(GameDataDir)\sts2.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(GameDataDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GodotSharp">
+      <HintPath>$(GameDataDir)\GodotSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CheckGameAssemblies" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(GameDataDir)\sts2.dll')"
+           Text="sts2.dll not found under GameDataDir=$(GameDataDir); pass -p:GameDataDir=... to dotnet build." />
+    <Error Condition="!Exists('$(GameDataDir)\GodotSharp.dll')"
+           Text="GodotSharp.dll not found under GameDataDir=$(GameDataDir)." />
+  </Target>
+
+  <Target Name="StageModDirectory" AfterTargets="Build">
+    <MakeDir Directories="$(ModDistDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDistDir)" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\mod\$(ModId).json" DestinationFolder="$(ModDistDir)" />
+  </Target>
+
+</Project>

@@ -1,0 +1,12 @@
+{
+  "id": "sts2-replica",
+  "name": "STS2 Replica (skeleton)",
+  "author": "kewu",
+  "description": "Skeleton mod: loader entry point plus one placeholder relic in the shared relic pool.",
+  "version": "0.0.1",
+  "has_pck": false,
+  "has_dll": true,
+  "dependencies": [],
+  "affects_gameplay": true,
+  "min_game_version": "0.113.1"
+}
