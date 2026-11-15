@@ -1,9 +1,9 @@
 {
   "id": "sts2-replica",
-  "name": "STS2 Replica (skeleton)",
+  "name": "好牌多抓 / Good Card Replica",
   "author": "kewu",
-  "description": "Skeleton mod: loader entry point plus one placeholder relic in the shared relic pool.",
-  "version": "0.0.1",
+  "description": "新增遗物「好牌多抓」：用不想要的卡牌奖励充能（制模），攒满后可从卡组按稀有度加权取样一张同名新卡作为奖励（取样）。",
+  "version": "0.1.0",
   "has_pck": false,
   "has_dll": true,
   "dependencies": [],
