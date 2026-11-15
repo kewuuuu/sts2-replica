@@ -21,6 +21,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- DLL-only mod (has_pck:false): there is no res:// pipeline, so the relic art rides inside the dll.
+         LogicalName is pinned because EmbeddedResource default naming follows RootNamespace. -->
+    <EmbeddedResource Include="assets/icons/good_card_replica_icon.png" LogicalName="Sts2Replica.Art.good_card_replica_icon.png" />
+    <EmbeddedResource Include="assets/icons/good_card_replica_icon_outline.png" LogicalName="Sts2Replica.Art.good_card_replica_icon_outline.png" />
+    <EmbeddedResource Include="assets/icons/good_card_replica_big.png" LogicalName="Sts2Replica.Art.good_card_replica_big.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="sts2">
       <HintPath>$(GameDataDir)\sts2.dll</HintPath>
       <Private>false</Private>

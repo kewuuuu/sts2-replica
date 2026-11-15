@@ -39,3 +39,20 @@
 2. 补丁只在 `__instance is GoodCardReplica` 时生效，其余一律放行（`__result` 不变），保证与原版遗物零竞争。
 3. 若 Harmony 补丁因游戏更新失效，必须能**退化为占位图而不是崩溃** —— 补丁方法体用 try/catch 包住，失败时记录一次日志后放行原逻辑。
 4. 内嵌资源方式：把三张 PNG 以 `<EmbeddedResource>` 编进 dll（csproj `ItemGroup`），运行时 `GetManifestResourceStream` 读取，避免再依赖外部文件路径。
+
+## 已接入（路线 A 落地，v0.113.1 构建通过）
+
+改动只有四处：`sts2-replica.csproj` + 新增 `src/Art/ReplicaArt.cs`、`src/Art/RelicIconPatch.cs` + 本段文档。
+
+1. **打包**：csproj 新增 `ItemGroup`，三张 PNG 逐个写明 `LogicalName="Sts2Replica.Art.<文件名>"`。默认嵌入名按 `RootNamespace` 推导（会变成 `Sts2Replica.assets.icons.*`），写死后补丁侧的资源名可预测；`ReplicaArt.ResolveResourceName` 仍保留后缀匹配兜底。
+2. **解码 API 的真实形态（本机 GodotSharp 实测，与"首选"写法不一致）**：`Image.LoadPngFromBuffer(byte[])` 在本机绑定是**实例方法**，像素解到接收者身上，返回值是 `Godot.Error`。
+   - 写成静态调用 → `CS0120: 对象引用对于非静态的字段、方法或属性"Image.LoadPngFromBuffer(byte[])"是必需的`
+   - 把返回值当 `Image` 用 → `CS0029: 无法将类型"Godot.Error"隐式转换为"Godot.Image"`
+   - 正确写法：`using Image image = new Image(); if (image.LoadPngFromBuffer(png) != Error.Ok ...) return null; return ImageTexture.CreateFromImage(image);`（`ImageTexture.CreateFromImage` 是静态的，编译期已验证）
+3. **缓存**：`ConcurrentDictionary<string, Texture2D>`，键 `relic.Id.Entry + "/" + variant`（`icon` / `outline` / `big`）。**只缓存成功结果** —— 失败不落缓存，下一次 getter 会重试，避免瞬时失败把占位图钉死。
+4. **补丁**：三个 `[HarmonyPatch(typeof(RelicModel), nameof(...), MethodType.Getter)]` 类，`Postfix(RelicModel __instance, ref Texture2D __result)`；`__instance is not GoodCardReplica` 立即 return，其它遗物零影响；提供器返回 null 时**不改** `__result`，原 getter 结果（含 `missing_power.png` 兜底）原样保留。
+5. **线程**：解码只发生在 getter 调用内（主线程），没有后台预热、没有静态构造期创建 —— `ImageTexture` 不能离开主线程创建。
+6. **失败上报**：同一失败键只 `Log.Error` 一次（`Reported` 去重），不刷屏、不抛异常。
+7. `src/ReplicaMod.cs` 未改：`:41` 的 `PatchAll(Assembly.GetExecutingAssembly())` 本来就会扫到新增的三个 `[HarmonyPatch]` 类。
+
+**未验证（需要真机启动游戏）**：`NRelic.cs:145-151`（小图/大图 + 描边）、`NRelicInventoryHolder.cs:249`、`RelicReward.cs:104`、`NInspectRelicScreen.cs:400-411` 里纹理的实际显示、缩放与描边配色，以及 Harmony 的 detour 是否被调用方内联绕过（getter 体内有 `ResourceLoader.Load` 调用，按常规不会被内联）。
