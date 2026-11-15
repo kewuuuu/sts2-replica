@@ -24,6 +24,10 @@ public static class ReplicaMod
     public static void Init()
     {
         ReplicaConfig config = ReplicaConfigStore.Load();
+#if RITSULIB
+        // 仅当本机构建引用了 RitsuLib 时才有这段代码；运行期 RitsuLib 不在也只会留一条警告。
+        Integration.RitsuLibSettingsPage.TryRegister();
+#endif
         PatchLocalization();
         ModHelper.AddModelToPool<SharedRelicPool, GoodCardReplica>();
         RunManager.Instance.RunStarted += OnRunStarted;

@@ -24,3 +24,22 @@
   该方法在联机战斗中还会抛异常，RewardSynchronizer.cs:84-87）。
 - README 重写（玩法/安装/设置/多人/已知边界）、manifest 升到 0.1.0、新增 `pack.ps1`。
 - 待办：图标接入 → 实机冒烟 → 打包发布。
+
+## 2026-11-15 游戏内设置页（RitsuLib）
+
+- 新增 `src/Integration/RitsuLibSettingsPage.cs`：`ModSettingsRegistry.Register(ModSettingsPage)` +
+  `ModSettingsPageBuilder` / `ModSettingsSectionBuilder` / `ModSettingsBindings.Callback<T>`（`SaveScope.Global`）
+  注册一页设置；8 个键与 `ReplicaConfig` 同名同默认值，绑定读写 `ReplicaConfigStore.Current`，
+  写入回调直接落盘、框架的 Save 回调按脏标记兜底。
+- `src/Config/ReplicaConfigStore.cs` 新增 `Save(ReplicaConfig)`：写回当前在用的候选路径，并用
+  `ReplicaConfig.Parse` 重算 `Current`；写出的 12 个键与解析器读取的键集完全相同（实测 diff 为空）。
+- `sts2-replica.csproj` 新增 `EnableRitsuLib` 开关（默认 true）：条件 Import `RitsuLib.References.props`
+  （五个 `Private=False` 引用）+ `RITSULIB` 编译常量；关掉或本机找不到 RitsuLib 时
+  `Compile Remove="src/Integration/**"`。两种配置均 0 警告 0 错误，`dist/sts2-replica/` 仍只有 dll + json。
+- `src/ReplicaMod.cs` 在 `Load()` 之后加一行 `#if RITSULIB` 的 `Integration.RitsuLibSettingsPage.TryRegister()`：
+  先探测 `STS2-RitsuLib.Settings` 程序集是否加载，注册异常只留一条
+  `[sts2-replica] RitsuLib settings page not registered: ...` 警告。
+- 无头启动实测：注册成功（日志 `[sts2-replica] RitsuLib settings page registered: mod_id=sts2-replica, page_id=replica-settings`）；
+  手工放的 12 键 JSON 被读回（`charge_required=5, offer_count=3, start_with_relic=True`）；关掉开关的版本照常初始化、
+  无设置页相关日志、无异常，退出码 0。
+- 未验证：设置页在真实 UI 里的观感、滑块步进手感、拖动时写入的触发频率（无头模式无法交互）。

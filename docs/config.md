@@ -7,7 +7,7 @@
 2. `user://sts2-replica/config.json`
    （即 `%AppData%/Slay the Spire 2/sts2-replica/config.json`）
 
-加载时机：mod 初始化（`ReplicaMod.Init`）一次。改配置后需要重启游戏。
+加载时机：mod 初始化（`ReplicaMod.Init`）一次。手改文件后需要重启游戏；用下面「游戏内设置页」改则不需要重启。
 
 ## 键位与默认值
 
@@ -38,3 +38,33 @@
 
 `src/Config/ReplicaConfig.cs` 的 `ReplicaConfig.Parse(string?)` 是纯函数（只依赖
 `System.Text.Json`），可以直接单测；文件定位在 `src/Config/ReplicaConfigStore.cs`。
+
+## 游戏内设置页（RitsuLib，可选）
+
+装了 [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) 时，RitsuLib 的设置界面里会多出
+「好牌多抓」一页（注册键 `mod_id=sts2-replica`、`page_id=replica-settings`），可直接改这 8 个键：
+
+| 设置页条目 | 键 | 设置页取值范围 |
+| --- | --- | --- |
+| 充能阈值 a | `charge_required` | 1..20，步进 1 |
+| 取样候选数 b | `offer_count` | 1..3，步进 1 |
+| 白卡权重 c | `weight_common` | 0..100，步进 1 |
+| 蓝卡权重 d | `weight_uncommon` | 0..100，步进 1 |
+| 金卡权重 e | `weight_rare` | 0..100，步进 1 |
+| 无色牌权重 f | `weight_colorless` | 0..100，步进 1 |
+| 诅咒权重 g | `weight_curse` | 0..100，步进 1 |
+| 开局自带遗物 | `start_with_relic` | 开关 |
+
+滑块上限只是界面取值区间，解析器规则不变（`charge_required` 下限 1、`offer_count` 钳制 1..3、
+权重钳制 0..1000000）。
+
+- 写回的文件：优先覆盖**当前正在用的那个候选路径**（见开头两条）；都不存在时写
+  `<游戏可执行文件目录>/mods/config/sts2-replica.json`，目录自动创建。
+- 写回内容是全部 12 个键，所以设置页没暴露的 4 个过滤开关（`include_basic` / `include_status` /
+  `include_quest` / `dedupe`）按当前内存值原样保留，不会因为点了一次滑块被重置。
+- 多久生效：取样、权重、阈值、候选数都在**下一次判定**就生效（`GoodCardReplica` 在判定当下读
+  `ReplicaConfigStore.Current`）；`start_with_relic` 只在开局事件里读一次（`src/ReplicaMod.cs` 的
+  `OnRunStarted`），所以**下一次开局**生效。两者都**不需要重启游戏**。
+- 没有 RitsuLib 时这一页不会出现，模组照常编译、照常运行，只认 JSON 文件（构建开关见 README）。
+- 写入失败（目录不可写等）只在日志里留一条 `[sts2-replica] could not write config at ...`，
+  改动仍留在内存里，本次游戏内照样生效。

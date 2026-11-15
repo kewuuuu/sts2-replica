@@ -53,7 +53,7 @@
 
 ## 设置
 
-配置文件（改完需重启游戏）：
+配置文件（手改后需重启游戏）：
 
 1. `<游戏可执行文件目录>\mods\config\sts2-replica.json`
 2. `%AppData%\Slay the Spire 2\sts2-replica\config.json`
@@ -61,6 +61,14 @@
 不写文件即全部使用默认值；坏值一律回落默认。全部键位、默认值与容错规则见
 [`docs/config.md`](docs/config.md)：充能阈值 `charge_required`、候选数 `offer_count`、
 五档权重 `weight_*`、开局自带 `start_with_relic`，以及基础牌/状态牌/任务牌/去重等过滤开关。
+
+装了 [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) 时，RitsuLib 的设置界面里会多出
+「好牌多抓」一页，8 个常用项（充能阈值、候选数、五档权重、开局自带）可以直接改；改完立即写回上面那份 JSON，
+**不需要重启游戏**（只有 `start_with_relic` 要等下一次开局）。没装 RitsuLib 就只有 JSON 文件，模组照常编译运行。
+
+构建开关：默认按本机路径引用 RitsuLib（可用 `-p:RitsuLibDir=...` 覆盖、`-p:RitsuLibReferenceTarget=...` 指定
+compat 版本）；`dotnet build sts2-replica.csproj -c Release -p:EnableRitsuLib=false` 产出完全不引用 RitsuLib、
+不含设置页的版本，两种配置都必须 0 警告 0 错误。
 
 ## 投放
 
