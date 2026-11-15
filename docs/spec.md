@@ -35,6 +35,7 @@
 
 - 抽取权重按**卡牌稀有度**分档：白/蓝/金/无色/诅咒；基础牌默认归入白卡档（用户 m00150 定：基础牌也算）。
 - 过滤开关至少包含：基础牌是否进池、状态牌是否进池、任务牌是否进池、是否去重（同名只出现一次）。
+- `offer_count` b 在 beta 钳制 1..3：`FromSimpleGridForRewards` 本身没有张数上限（`CardSelectCmd.cs:70-73` 的 ≤3 限制只属于 `FromChooseACardScreen`），钳制理由是网格选牌 UI 在 b>3 时未经实机验证，属保守值。
 
 ## 3. 投放
 
@@ -43,7 +44,8 @@
 
 ## 4. 硬约束
 
-- 多人兼容必须考虑：所有随机必须走**多人一致的 Rng/上下文**，不得用本地 `new Random()`；任何影响 run 状态的改动必须走官方已有命令通道（`CardSelectCmd` 的 PlayerChoice 同步、`RewardSynchronizer.SyncLocal*`），**不新造网络消息**（v0.113.1 的 PaelsWing 亦无自建同步，可直接照抄其写法）。
+- 多人兼容必须考虑：所有随机必须走**多人一致的 Rng/上下文**（本实现用 `new Rng(player, relic.Id, (ulong)RunState.TotalFloor)`），不得用本地 `new Random()`；不新造网络消息（v0.113.1 的 PaelsWing 亦无自建同步，照抄其写法即可）。
+- **拿卡路径禁止调用 `RewardSynchronizer.SyncLocalObtainedCard`**（v0.113.1 实证，本轮修正）：原版 `CardReward.OnSelect()` 拿卡只做 `CardPileCmd.Add(obtainedCard, PileType.Deck)`（CardReward.cs:279），而该同步消息的远端处理自己会 `RunState.AddCard` + `CardPileCmd.Add`（RewardSynchronizer.cs:210-211）⇒ 再发一次会让远端**重复加卡**；且它在联机战斗中会直接抛异常（RewardSynchronizer.cs:84-87）。原版唯一调用点是商人场景的 CrystalSphereCurse.cs:23。选择同步由 `CardSelectCmd.FromSimpleGridForRewards` 内部的 PlayerChoice 机制负责（:154 ReserveChoiceId / :181 SyncLocalChoice / :186 WaitForRemoteChoice）。
 - alternative 按钮总数上限 2：注入前 `if (alternatives.Count >= 2) return;` 防御（Skip 已占 1 位；Driftwood/PaelsWing 等会再占位）。
 - 不放独立奖励行、不新增 Reward 子类。
 - 纯 DLL 模组：不要求玩家另装前置框架即可运行（设置界面方案见 docs/settings-ui.md 的结论）。
@@ -51,7 +53,7 @@
 ## 5. 验收点（beta）
 
 1. 装进 `mods/` 后游戏能加载，无 Harmony 补丁冲突报错。
-2. 持遗物时卡牌奖励屏出现【制模】；连点 a 次后同一位置变【取样】；取样出 b 张候选、只能选 1、副本无升级/附魔、充能清零。
+2. 持遗物时卡牌奖励屏出现【制模】；连点 a 次后同一位置变【取样】；取样出 b 张候选、只能选 1、充能清零；候选是新实例（起点无升级/附魔），但**奖励升级判定与遗物改造仍可作用于它**（这是与「克隆」的关键区别）。
 3. 未持遗物时界面与行为与原版完全一致。
 4. 同时持有 Driftwood / PaelsWing 时不抛 "More than 2 card reward alternatives"。
 5. 设置改成 a=1/b=3 等极端值不崩，权重全 0 时有安全兜底（退回等概率或取消按钮）。
