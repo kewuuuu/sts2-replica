@@ -1,0 +1,13 @@
+# dotnet
+bin/
+obj/
+*.user
+.vs/
+
+# build output shipped to the game
+dist/
+*.pck
+
+# local artifacts
+refs/
+_tmp/
