@@ -9,11 +9,14 @@
 | 状态 | 按钮 | 行为 | afterSelected |
 |---|---|---|---|
 | 充能 < a | 【制模】 | 放弃本次卡牌奖励，遗物充能 +1 | `EndSelectionAndCompleteReward` |
-| 充能 ≥ a | 【取样】 | 清空充能 → 从卡组按权重抽 b 张 → 选 1 张 → 获得**干净副本** | `EndSelectionAndCompleteReward` |
+| 充能 ≥ a | 【取样】 | 清空充能 → 从卡组按权重抽 b 张 → 选 1 张 → **按奖励路径获得一张同名新卡** | `EndSelectionAndCompleteReward` |
 
-- 干净副本：同 Id、升级等级 0、无附魔、无临时修饰（不继承原牌的升级/附魔）。
+- **取样语义（用户 m00271 澄清，勿回退成克隆）**：不是"复制卡组里那张牌"，而是**让卡牌奖励里出现一张与卡组中某张牌同名的牌**，并照常走奖励流程：
+  - 候选卡 = 该牌的规范模板经 `RunState.CreateCard(template, player)` 新建的**新实例**（因此天然不继承原牌的升级与附魔）；
+  - 升级照常按**卡牌奖励的升级判定**滚动（`CardFactory.RollForUpgrade`，受 `Hook.ModifyCardRewardUpgradeOdds` 影响），并允许其他遗物的改造效果作用其上；
+  - 选中后走**普通卡牌奖励拿牌**的路径发放（`CardPileCmd.Add` + `RewardSynchronizer.SyncLocalObtainedCard`），确保"获得卡牌"类遗物钩子正常触发。
 - 与卡牌奖励**互斥**：按钮触发即完成本次奖励，不再给出原版 3 张随机牌。
-- 玩家在选牌界面取消（若 `FromChooseACardScreen` 支持 skip）时，充能**退还**。
+- 候选以 `CardCreationResult` 列表呈现，用 `CardSelectCmd.FromSimpleGridForRewards` 选 1（该命令内部自带多人选择同步）；玩家取消时充能**退还**。
 
 ## 2. 可配置项（默认值）
 
@@ -40,7 +43,7 @@
 
 ## 4. 硬约束
 
-- 多人兼容必须考虑：所有随机必须走**多人一致的 Rng/上下文**，不得用本地 `new Random()`；任何影响 run 状态的改动必须走官方同步通道（无通用 API 时，参照 PaelsWing 为其效果自建 `RunManager.Instance.RewardSynchronizer.SyncLocal*` 式消息）。
+- 多人兼容必须考虑：所有随机必须走**多人一致的 Rng/上下文**，不得用本地 `new Random()`；任何影响 run 状态的改动必须走官方已有命令通道（`CardSelectCmd` 的 PlayerChoice 同步、`RewardSynchronizer.SyncLocal*`），**不新造网络消息**（v0.113.1 的 PaelsWing 亦无自建同步，可直接照抄其写法）。
 - alternative 按钮总数上限 2：注入前 `if (alternatives.Count >= 2) return;` 防御（Skip 已占 1 位；Driftwood/PaelsWing 等会再占位）。
 - 不放独立奖励行、不新增 Reward 子类。
 - 纯 DLL 模组：不要求玩家另装前置框架即可运行（设置界面方案见 docs/settings-ui.md 的结论）。
