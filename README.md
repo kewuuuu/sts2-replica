@@ -37,16 +37,17 @@
 
 ## 安装
 
-1. 构建并打包：
+1. 构建（产物由构建自动落到 `dist/sts2-replica/`，不需要单独打包脚本）：
 
    ```powershell
-   ./pack.ps1            # 生成 dist/sts2-replica/{sts2-replica.dll, sts2-replica.json}
-   ./install.ps1         # 复制进 <游戏根>\mods\sts2-replica\（会先确认）
+   dotnet build sts2-replica.csproj -c Release   # → dist/sts2-replica/{sts2-replica.dll, sts2-replica.json}
+   ./install.ps1                                 # 复制进 <游戏根>\mods\sts2-replica\（会先确认）
    ```
 
 2. 或手动把 `sts2-replica.dll` 与 `sts2-replica.json` 放进
    `<Steam>\steamapps\common\Slay the Spire 2\mods\sts2-replica\`。
 3. 启动游戏，日志（`%AppData%\SlayTheSpire2\logs\godot.log`）里应出现 `[sts2-replica] initialized` 开头的行。
+   跑 `./tools/check-log.ps1` 可以只筛出 `[sts2-replica]` 开头的行，加载失败时它会直接告诉你没有。
 
 安装脚本默认目标是本机 Steam 路径，换机器请改 `-ModsDir`。
 
