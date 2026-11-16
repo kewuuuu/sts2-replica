@@ -43,3 +43,11 @@
   手工放的 12 键 JSON 被读回（`charge_required=5, offer_count=3, start_with_relic=True`）；关掉开关的版本照常初始化、
   无设置页相关日志、无异常，退出码 0。
 - 未验证：设置页在真实 UI 里的观感、滑块步进手感、拖动时写入的触发频率（无头模式无法交互）。
+
+## 2026-11-16 release 打包（0.1.0-beta）
+
+- manifest 版本抬到 `0.1.0-beta`：游戏用 `SemanticVersion.TryFromString` 解析（`MegaCrit.Sts2.Core.Debug/SemanticVersion.cs:41`，支持 prerelease），解析失败会记 `declares version ... which is not a valid Semantic Version`。
+- 新增 `tools/pack-release.ps1`：build → 读 manifest version → 打成 `dist/sts2-replica-<version>.zip`，包内顶层是 `sts2-replica/`（解压即进 `mods/`）。
+- 新增 `docs/release.md`：包结构、安装/卸载、验证状态（已验/未验照实列）、版本号与 `affects_gameplay` 依据、工坊上传步骤（需人工在 Steam 客户端做）。
+- 踩坑：Windows PowerShell 5.1 的 `Get-Content -Raw` 对**无 BOM 的 UTF-8** 文件按 ANSI 代码页解码，中文描述末字节吃掉 JSON 引号 ⇒ `ConvertFrom-Json` 抛 `ArgumentException`。改用 `[System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)`。manifest 本身不加 BOM（游戏加载器按 UTF-8 读，日志里中文名正常）。
+- 产物实测：`dist/sts2-replica-0.1.0-beta.zip` 28913 B，解压得 `sts2-replica/sts2-replica.dll` 52224 B（与 dist 逐字节一致）+ `sts2-replica.json` 434 B（version=0.1.0-beta）。`dist/` 在 .gitignore 内。
