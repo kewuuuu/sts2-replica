@@ -1,0 +1,51 @@
+[h1]好牌多抓 / Good Card Replica[/h1]
+[i]适用游戏版本：Slay the Spire 2 v0.113.1 · 模组版本 0.3.0-beta[/i]
+
+[b]这是什么[/b]
+新增一个共享遗物「好牌多抓」：把「拿一张不想要的卡」变成「攒着换一张卡组里已有的卡」。
+
+[b]怎么玩[/b]
+[list]
+[*][b]制模[/b]：卡牌奖励界面多出一个【制模】按钮。点它放弃本次卡牌奖励，遗物 +1 层充能。
+[*]充能不满（默认 3 层）时只有【制模】；攒满后同一个按钮变成【取样】。
+[*][b]取样[/b]：清空充能，给出 2 张候选（默认），候选取自你卡组里已有卡的同类新卡，选 1 张加入卡组。
+[/list]
+
+[b]取样的规则（重要）[/b]
+[list]
+[*]候选不是「复制品」：每张候选都是新生成的同名卡，起点没有升级、没有附魔。
+[*]但它走正常的卡牌奖励流程：本次奖励的升级判定、蛋类与其它遗物对卡牌奖励的改造照常作用在它身上。
+[*]候选按稀有度加权抽取（权重可在设置里改）：白 6 / 蓝 4 / 金 2 / 无色 1 / 诅咒 3。
+[*]卡组里的同名卡按去重计数（可关），可选是否包含基础牌、状态牌、任务牌。
+[/list]
+
+[b]设置[/b]
+[list]
+[*]配置文件：mods/config/sts2-replica.cfg（内容是 JSON）
+[*]装了 RitsuLib 的话，游戏设置里会出现本模组的一页设置界面（拖动即保存，改动从下一局开始生效）
+[*]参数在开局时冻结：局内改设置只影响之后创建的对局
+[*]可调：充能层数、候选张数、五档稀有度权重、开局是否自带遗物、各类过滤开关
+[/list]
+
+[b]多人[/b]
+[list]
+[*]充能是每个玩家自己的；模组参数以房主为准
+[*]两端需装同一版本、使用同一份参数（客户端只发请求，不会改动本机文件）
+[*]玩家持有 PaelsWing 时本模组的按钮会让位，避免撞上原版「最多 2 个奖励选项」的上限
+[/list]
+
+[b]安装[/b]
+[list]
+[*]在 Steam 订阅本物品即可，游戏启动时自动加载到 mods 里
+[*]模组 id：sts2-replica；没有强制前置（RitsuLib 只是可选的设置界面增强）
+[/list]
+
+[b]已知限制[/b]
+[list]
+[*]beta 阶段：双端联机的「中途加入」与「读档重放」尚未实机覆盖
+[*]同一楼层重复取样会抽到同一组候选（随机种子含楼层号）
+[*]图鉴里的大图没有描边，遗物小图标有（这是原版的分层方式）
+[/list]
+
+[b]English summary[/b]
+Adds a shared relic that turns a skipped card reward into a charge, and lets you spend full charges to sample (default 2) same-name cards already in your deck, weighted by rarity. Values are frozen at run start; in co-op the host's values win. Requires Slay the Spire 2 v0.113.1.

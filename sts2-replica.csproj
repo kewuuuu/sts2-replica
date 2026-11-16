@@ -46,6 +46,7 @@
     <!-- scratch/verification projects and staged output must never join the mod's compile set -->
     <Compile Remove="_tmp/**" />
     <Compile Remove="dist/**" />
+    <Compile Remove="tools/**" />
   </ItemGroup>
 
   <ItemGroup>

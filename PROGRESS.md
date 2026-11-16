@@ -92,3 +92,16 @@
 - 未实测：`.cfg` 首次真实写入（无头不进设置页）；客户端采纳后再冻结、跨层重试计数与 5 次封顶（需双开多局）；描边观感（headless 不渲染）。
 - 旧文件：`mods/config/sts2-replica.json` 由玩家手动删除，本版既不读也不写。
 - 版本：manifest 升到 0.3.0-beta。
+
+## 2026-11-17 创意工坊发布（item 3840979834）
+
+- 目标（m01173「直接推创意工坊」）：把 0.3.0-beta 发布到 Steam 创意工坊。
+- 结论：条目 **3840979834** 已创建并公开提交内容（https://steamcommunity.com/sharedfiles/filedetails/?id=3840979834），页面实测可打开，标题「好牌多抓 / Good Card Replica」、76.365 KB、描述与预览图渲染正常、1 项改动说明。
+- 工具链（新增）：`tools/WorkshopUploader/`（`--dry-run` 校验 / `--create` 建条目 / `--update <id>` 更新 / `--probe` 只读诊断），`tools/pack-workshop.ps1` 把构建产物摆进 `dist/workshop/`；`sts2-replica.csproj` 加一行 `<Compile Remove="tools/**" />` 防止工具源码被编进模组 dll（dll 仍是 66048 B）。
+- **关键坑（manual dispatch）**：游戏目录的 `Steamworks.NET.dll` 是 manual dispatch 版——`CallbackDispatcher.cs:34` 调 `SteamAPI_ManualDispatch_Init()`，`:147-208` 用 `ManualDispatch_RunFrame/GetNextCallback` 取回调，异步结果在 `:161-179`（`m_iCallback == 703` → `SteamAPICallCompleted_t` → `ManualDispatch_GetAPICallResult`）按 handle 从 `m_registeredCallResults` 派发。
+  ⇒ 必须用 `CallResult<T>.Create(delegate(T, bool bIOFailure))` + `Set(call)` + `SteamAPI.RunCallbacks()` 主循环取结果；`SteamUtils.IsAPICallCompleted/GetAPICallResult` 在这套流程里是死路（对任何 handle 都回 `completed=True, flaggedFailed=True, k_ESteamAPICallFailureInvalidHandle`，包括伪造的 handle），`Callback<CreateItemResult_t>` 也永远收不到（那两种 result 只作为 call result 存在）。
+- 反编译证据留档：`D:/engine/DSH/Workspace/_cache/swdecomp/{SteamAPI.cs,CallbackDispatcher.cs,CallResult.cs}`（`ilspycmd -t <类型>` 逐类型导出）。
+- 反证：把游戏 headless 跑起来（Steam 认为 app 正在运行）后重跑 `--probe`，结果不变 ⇒ 「必须由 Steam 启动」的假设被排除，问题纯属机制用错。
+- 发布后核验：`dist/workshop-item-id.txt` = 3840979834；用浏览器打开条目页确认公开可见（标题/预览图/描述/大小 76.365 KB 均正常）。
+- 未验证：`--update` 走「复用同一 item」的分支（`SubmitItemUpdate` 已在 `--create` 内跑通，但复用分支没跑）；条目截图仍缺（`docs/workshop.md` 列了建议的 5 张）。
+

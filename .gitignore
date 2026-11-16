@@ -11,3 +11,4 @@ dist/
 # local artifacts
 refs/
 _tmp/
+steam_appid.txt
