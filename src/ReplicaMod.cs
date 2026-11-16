@@ -67,6 +67,12 @@ public static class ReplicaMod
     {
         try
         {
+            // RunStarted also fires when a save is loaded (RunManager.cs:788, NGame.cs:1182), where a
+            // relic the player dropped earlier would be handed out again. A fresh run sits at floor 0.
+            if (state.TotalFloor > 0)
+            {
+                return;
+            }
             RelicModel template = ModelDb.Relic<GoodCardReplica>();
             foreach (Player player in state.Players)
             {

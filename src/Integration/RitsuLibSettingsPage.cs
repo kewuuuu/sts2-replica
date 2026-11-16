@@ -168,6 +168,7 @@ internal static class RitsuLibSettingsPage
             read,
             value =>
             {
+                Log.Info("[sts2-replica] settings write " + dataKey + "=" + value);
                 write(draft, value);
                 draft.IsDirty = true;
                 Persist(draft);
@@ -188,6 +189,7 @@ internal static class RitsuLibSettingsPage
             read,
             value =>
             {
+                Log.Info("[sts2-replica] settings write " + dataKey + "=" + value);
                 write(draft, value);
                 draft.IsDirty = true;
                 Persist(draft);

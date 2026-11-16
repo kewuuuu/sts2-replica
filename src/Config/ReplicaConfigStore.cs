@@ -30,6 +30,12 @@ public static class ReplicaConfigStore
 				}
 				_current = ReplicaConfig.Parse(File.ReadAllText(path));
 				Log.Info("[sts2-replica] config loaded from " + path);
+				if (Serialize(_current) != Serialize(ReplicaConfig.Default))
+				{
+					// The reward screen syncs an index into a list every peer rebuilds from its own file, so a
+					// mismatched config desyncs the run instead of being rejected by the handshake.
+					Log.Warn("[sts2-replica] non-default config is active; a multiplayer run needs every player to use the same sts2-replica.json");
+				}
 				return _current;
 			}
 			catch (Exception exception)

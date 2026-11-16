@@ -13,6 +13,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Saves.Runs;
@@ -62,13 +63,19 @@ public sealed class GoodCardReplica : RelicModel
 		{
 			return false;
 		}
-		ReplicaConfig config = ReplicaConfigStore.Current;
-		if (Charges >= config.ChargeRequired)
+		// PaelsWing appends its own option with no count check (Models.Relics/PaelsWing.cs:79) and
+		// CardRewardAlternative.Generate throws once three survive (CardRewardAlternative.cs:74-77).
+		// Listener order decides who trips it, and every peer trips it at the same time, so we yield the slot.
+		if (player.GetRelic<PaelsWing>() != null)
 		{
-			if (!ReplicaDeckSampler.HasEligibleTemplate(player, config))
-			{
-				return false;
-			}
+			return false;
+		}
+		ReplicaConfig config = ReplicaConfigStore.Current;
+		// Always inject exactly one option, and never let a local setting decide whether one exists:
+		// peers rebuild this list from their own config and sync only an index into it
+		// (CardReward.cs:256), so a missing entry turns a pick into a bad-index error on the other side.
+		if (Charges >= config.ChargeRequired && ReplicaDeckSampler.HasEligibleTemplate(player, config))
+		{
 			alternatives.Add(new CardRewardAlternative("SAMPLE", OnSample, PostAlternateCardRewardAction.EndSelectionAndCompleteReward));
 			return true;
 		}

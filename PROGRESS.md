@@ -51,3 +51,20 @@
 - 新增 `docs/release.md`：包结构、安装/卸载、验证状态（已验/未验照实列）、版本号与 `affects_gameplay` 依据、工坊上传步骤（需人工在 Steam 客户端做）。
 - 踩坑：Windows PowerShell 5.1 的 `Get-Content -Raw` 对**无 BOM 的 UTF-8** 文件按 ANSI 代码页解码，中文描述末字节吃掉 JSON 引号 ⇒ `ConvertFrom-Json` 抛 `ArgumentException`。改用 `[System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)`。manifest 本身不加 BOM（游戏加载器按 UTF-8 读，日志里中文名正常）。
 - 产物实测：`dist/sts2-replica-0.1.0-beta.zip` 28913 B，解压得 `sts2-replica/sts2-replica.dll` 52224 B（与 dist 逐字节一致）+ `sts2-replica.json` 434 B（version=0.1.0-beta）。`dist/` 在 .gitignore 内。
+
+## 2026-11-16 多人兼容加固（三条风险收口）
+
+- Q3 选项数量溢出：`PaelsWing` 追加自己的选项时没有任何数量判断（`Models.Relics/PaelsWing.cs:79`），
+  而 `CardRewardAlternative.Generate` 在第三项存活时直接抛 `More than 2 card reward alternatives are not supported`
+  （`Entities.CardRewardAlternatives/CardRewardAlternative.cs:74-77`）。谁排在监听器前面谁把它推到 3，且各端同时抛。
+  处置：`GoodCardReplica` 在 `player.GetRelic<PaelsWing>() != null` 时直接不注入（让位），按钮消失属预期。
+- Q8 选项索引契约：奖励屏只同步索引（`Rewards/CardReward.cs:256` `cardRewardOption[num.Value - _cards.Count]`），
+  选项列表每端用本地配置重建。原实现「充能满但无可用模板就 return false」会让**选项数量**取决于本地配置。
+  处置：只要轮到我们注入，就**恰好注入一个**——充能满且有可用模板注入 SAMPLE，其余一律注入 MOLD。
+- Q5 读档重入：`RunStarted` 在读档时也会触发（`RunManager.cs:788`、`NGame.cs:1182`），
+  `GrantStartingRelics` 增加 `if (state.TotalFloor > 0) return;`，新局从 0 层起步。
+- 配置分叉预警：握手只比 id-version（`ModManager.cs:1133-1142`、`HandshakeManager.cs:119-125`），不比配置。
+  `ReplicaConfigStore.Load()` 读到非默认值时记一条 Warn，提示联机各方必须用同一份 `sts2-replica.json`。
+- 设置页写回调增加 `[sts2-replica] settings write <key>=<value>` 日志：此前有一次无头启动后
+  `mods/config/sts2-replica.json` 被写成 `charge_required: 2` / `start_with_relic: true`（默认 3 / false），
+  带日志连续三次干净启动均未复现，保留该行作为下次出现时的定位手段。
