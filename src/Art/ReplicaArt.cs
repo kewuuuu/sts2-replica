@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using Godot;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
@@ -135,7 +136,8 @@ internal static class ReplicaArt
 	{
 		return "Icon=" + CountPostfixes(typeof(RelicModel).GetProperty(nameof(RelicModel.Icon))!.GetGetMethod())
 			+ " IconOutline=" + CountPostfixes(typeof(RelicModel).GetProperty(nameof(RelicModel.IconOutline))!.GetGetMethod())
-			+ " BigIcon=" + CountPostfixes(typeof(RelicModel).GetProperty(nameof(RelicModel.BigIcon))!.GetGetMethod());
+			+ " BigIcon=" + CountPostfixes(typeof(RelicModel).GetProperty(nameof(RelicModel.BigIcon))!.GetGetMethod())
+			+ "; Icon postfix order=" + DescribePostfixes(typeof(RelicModel).GetProperty(nameof(RelicModel.Icon))!.GetGetMethod());
 	}
 
 	private static int CountPostfixes(System.Reflection.MethodInfo? getter)
@@ -145,6 +147,21 @@ internal static class ReplicaArt
 			return -1;
 		}
 		return HarmonyLib.Harmony.GetPatchInfo(getter)?.Postfixes.Count ?? 0;
+	}
+
+	/// <summary>Harmony keeps postfixes sorted by priority, so this list is also the run order: the last one wins __result.</summary>
+	private static string DescribePostfixes(System.Reflection.MethodInfo? getter)
+	{
+		if (getter == null)
+		{
+			return "none";
+		}
+		HarmonyLib.Patches? info = HarmonyLib.Harmony.GetPatchInfo(getter);
+		if (info?.Postfixes == null || info.Postfixes.Count == 0)
+		{
+			return "none";
+		}
+		return string.Join(",", info.Postfixes.Select(patch => patch.owner + ":" + patch.priority));
 	}
 
 	private static void Report(string key, Exception? exception)

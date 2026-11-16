@@ -14,6 +14,7 @@ namespace Sts2Replica.Art;
 [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.Icon), MethodType.Getter)]
 internal static class RelicIconPatch
 {
+	[HarmonyPriority(Priority.Last)]
 	private static void Postfix(RelicModel __instance, ref Texture2D __result)
 	{
 		if (__instance is not GoodCardReplica)
@@ -31,6 +32,7 @@ internal static class RelicIconPatch
 [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.IconOutline), MethodType.Getter)]
 internal static class RelicIconOutlinePatch
 {
+	[HarmonyPriority(Priority.Last)]
 	private static void Postfix(RelicModel __instance, ref Texture2D __result)
 	{
 		if (__instance is not GoodCardReplica)
@@ -48,6 +50,7 @@ internal static class RelicIconOutlinePatch
 [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.BigIcon), MethodType.Getter)]
 internal static class RelicBigIconPatch
 {
+	[HarmonyPriority(Priority.Last)]
 	private static void Postfix(RelicModel __instance, ref Texture2D __result)
 	{
 		if (__instance is not GoodCardReplica)
