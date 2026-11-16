@@ -49,11 +49,12 @@ internal static class RelicNodeArtPatch
 			{
 				icon.Texture = small;
 			}
+			// The outline is baked into the PNG now, so the layered outline vanilla Reload switched on
+			// (NRelic.cs:146-147) is hidden here: no texture write, just the visibility.
 			TextureRect? outline = __instance.Outline;
-			Texture2D? outlineTexture = ReplicaArt.IconOutline(model);
-			if (outline != null && outlineTexture != null)
+			if (outline != null)
 			{
-				outline.Texture = outlineTexture;
+				outline.Visible = false;
 			}
 			if (Reported.TryAdd("done", 0))
 			{
