@@ -1,0 +1,71 @@
+using System;
+using System.Collections.Concurrent;
+using Godot;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.Relics;
+using Sts2Replica.Models;
+
+namespace Sts2Replica.Art;
+
+/// <summary>
+/// Last line of defence for the icons: NRelic.Reload assigns Icon.Texture = Model.Icon / Model.BigIcon
+/// (NRelic.cs:139-155), so another mod that postfixes those getters can still overwrite the value we set.
+/// Re-running the assignment after Reload has finished makes the visible node carry our texture no matter
+/// who wins the getter chain. Reload is private, hence the name lookup.
+/// </summary>
+[HarmonyPatch(typeof(NRelic), "Reload")]
+internal static class RelicNodeArtPatch
+{
+	private static readonly ConcurrentDictionary<string, byte> Reported = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
+
+	private static void Postfix(NRelic __instance)
+	{
+		try
+		{
+			RelicModel model = __instance.Model;
+			if (model is not GoodCardReplica)
+			{
+				return;
+			}
+			TextureRect? icon = __instance.Icon;
+			if (icon == null)
+			{
+				return;
+			}
+			NRelic.IconSize size = Traverse.Create(__instance).Field("_iconSize").GetValue<NRelic.IconSize>();
+			if (size == NRelic.IconSize.Large)
+			{
+				Texture2D? big = ReplicaArt.BigIcon(model);
+				if (big != null)
+				{
+					icon.Texture = big;
+				}
+				return;
+			}
+			Texture2D? small = ReplicaArt.Icon(model);
+			if (small != null)
+			{
+				icon.Texture = small;
+			}
+			TextureRect? outline = __instance.Outline;
+			Texture2D? outlineTexture = ReplicaArt.IconOutline(model);
+			if (outline != null && outlineTexture != null)
+			{
+				outline.Texture = outlineTexture;
+			}
+			if (Reported.TryAdd("done", 0))
+			{
+				Log.Info("[sts2-replica] relic node art applied (" + size + ")");
+			}
+		}
+		catch (Exception exception)
+		{
+			if (Reported.TryAdd("failed", 0))
+			{
+				Log.Error("[sts2-replica] relic node art patch failed: " + exception.Message);
+			}
+		}
+	}
+}
