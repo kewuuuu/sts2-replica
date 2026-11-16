@@ -68,3 +68,15 @@
 - 设置页写回调增加 `[sts2-replica] settings write <key>=<value>` 日志：此前有一次无头启动后
   `mods/config/sts2-replica.json` 被写成 `charge_required: 2` / `start_with_relic: true`（默认 3 / false），
   带日志连续三次干净启动均未复现，保留该行作为下次出现时的定位手段。
+
+## 2026-11-16 联机参数跟随房主（v0.2.0-beta）
+
+- 需求（m00935 / m00962）：遗物充能是**每个玩家自己的**，但模组参数在联机局里以房主为准；客户端与房主不一致时看房主。
+- 网络消息：新增 `src/Net/ReplicaConfigMessage.cs`（房主→客户端，12 个字段：7 个 int + 5 个 bool，`ShouldBroadcast=true`、`Reliable`、`ShouldBuffer=true`）与 `ReplicaConfigRequestMessage.cs`（客户端→房主，空载荷）。
+  类型由 `MessageTypes.Initialize` 的 `GetSubtypesInMods<INetMessage>` 自动收编（`MessageTypes.cs:13-19`），id 按**类型名排序**分配（`NetTypeCache.cs:22`）且只占一字节（`NetMessageBus.cs:46`）⇒ **类型名不可再改，改名等于两端 id 变化**。
+- 权威判定：`ReplicaRuntimeConfig.IsMultiplayerClient`（`RunManager.Instance.NetService.Type == NetGameType.Client`）；房主开局广播、客户端开局请求，客户端采纳后 `Effective` 才切到房主数值，本机 JSON 不被覆盖（`TryWriteLocal` 在联机客户端只警告不落盘）。
+- 开局遗物：客户端在 `OnRunStarted` 里**不**发放，等 `OnHostConfigAdopted` 后按房主数值发放；`GrantStartingRelics` 保留 `TotalFloor > 0` 读档守卫与逐玩家去重。
+- 自愈：客户端的首问可能早于房主 handler 注册而被丢弃（`NetMessageBus.cs:88`），故在首个卡牌奖励判定处 `RequestConfigIfMissing()` 补发**一次**（flag 在 `AttachForRun` 复位），并记 Warn。
+- 异常面：`TypeToId(Type)` 是纯字典索引器（`NetTypeCache.cs:52-55`），未注册类型抛 `KeyNotFoundException`；`MessageTypes` 未初始化则抛 `InvalidOperationException`。故 id 探测用宽 catch，只记一条 Warn，绝不让异常冒出 `RunStarted`。
+- 未实测：自愈整链、中途加入/读档重放、「房主局内改设置不推送已在局内的客户端」；这三条仍是源码级结论。
+- 版本：manifest 升到 0.2.0-beta。

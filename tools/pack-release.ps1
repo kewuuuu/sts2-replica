@@ -50,7 +50,25 @@ foreach ($file in Get-ChildItem -LiteralPath $dist -File) {
 }
 
 try {
-    Compress-Archive -Path $packDir -DestinationPath $zip -CompressionLevel Optimal
+    # Compress-Archive in Windows PowerShell 5.1 writes entry names with backslashes, which the zip
+    # spec forbids (unzip warns about it, and some tools treat the whole name as a bare filename).
+    # Build the entries by hand so the separator stays a forward slash.
+    # Windows PowerShell 5.1 needs both assemblies: ZipFile lives in ...FileSystem, ZipArchiveMode in
+    # the base System.IO.Compression.
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::Open($zip, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        foreach ($file in Get-ChildItem -LiteralPath $packDir -File) {
+            $entryName = $modId + '/' + $file.Name
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $archive, $file.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal
+            ) | Out-Null
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
 }
 finally {
     Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
