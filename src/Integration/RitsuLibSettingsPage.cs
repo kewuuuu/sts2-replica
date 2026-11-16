@@ -70,7 +70,8 @@ internal static class RitsuLibSettingsPage
         ModSettingsPageBuilder builder = new ModSettingsPageBuilder(ReplicaMod.ModId, PageId);
         builder.WithTitle(ModSettingsText.Literal("好牌多抓"));
         builder.WithDescription(ModSettingsText.Literal(
-            "改动会立刻写回 sts2-replica.json。取样相关数值在下一次判定时生效，开局自带遗物在下一次开局时生效。"
+            "改动会立刻写回 sts2-replica.cfg。改动从下一局开始生效：本局在开局时就把参数冻结了，"
+            + "局内再改只影响之后创建的对局（读档开局同理）。"
             + "联机时以房主配置为准：客户端这里显示的是房主的数值，写入不会改动本机文件。"));
         builder.WithModDisplayName(ModSettingsText.Literal("好牌多抓 / Good Card Replica"));
 

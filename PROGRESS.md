@@ -80,3 +80,15 @@
 - 异常面：`TypeToId(Type)` 是纯字典索引器（`NetTypeCache.cs:52-55`），未注册类型抛 `KeyNotFoundException`；`MessageTypes` 未初始化则抛 `InvalidOperationException`。故 id 探测用宽 catch，只记一条 Warn，绝不让异常冒出 `RunStarted`。
 - 未实测：自愈整链、中途加入/读档重放、「房主局内改设置不推送已在局内的客户端」；这三条仍是源码级结论。
 - 版本：manifest 升到 0.2.0-beta。
+
+## 2026-11-17 描边、参数开局冻结、配置改名（v0.3.0-beta）
+
+- 需求（m01092 / m01101）：遗物小图标缺黑色描边；模组参数"游戏期间不能修改"，创建对局时记录、房主局内改动只影响之后创建的对局；配置文件名改成 sts2-replica.cfg。决策：图鉴大图保持现状（不加描边）、设置页仍可拖动写盘但只影响下一局、自愈重试每层一次且每局封顶 5 次。
+- 描边：`NRelic.cs:142-155` 分两态——Small 走 `Icon.Texture = Model.Icon` + `Outline.Visible = true; Outline.Texture = Model.IconOutline`，Large 走 `BigIcon` 且 `Outline.Visible = false` ⇒ 描边层只存在于小图标，图鉴大图本就没有。原剪影 PNG 与图标同为 128×128、无外扩，若 `res://materials/ui/relic_mat.tres` 的 shader 不向外扩张就被压在图标下面，表现为"没有描边"。处置：把黑描边烘进 `assets/icons/good_card_replica_icon.png`（rim pass，深色 #14161b 外扩约 3 px，1545 B → 1955 B），`RelicNodeArtPatch.cs:54-59` 改为 `Outline.Visible = false` 且不再写 `Outline.Texture`；大图与剪影资源不动。
+- 冻结：`ReplicaRuntimeConfig` 增加 `_runSnapshot` 与 `ForThisRun`（`:27`，无快照回落 `Effective`）、`BeginRun`（`:33`，日志 `run settings frozen: <fingerprint>`）、`EndRun`（`:43`）。快照时机：单人/房主在 `ReplicaMod.cs:74` 的 `OnRunStarted` 里 `EndRun` → `BeginRun(Effective)`；联机客户端在 `ReplicaConfigSync.cs:112` 采纳房主配置成功后冻结。玩法两条读取（`GoodCardReplica.cs:77`、`:114`）改用 `ForThisRun`。**不做局内广播**：局内改设置不推送，只影响之后创建的对局。
+- 改名：`ReplicaConfigStore.cs:15` `FileName = "sts2-replica.cfg"`，`:88` `ResolveConfigPath()` 是唯一路径（`<exe 目录>/mods/config/`），删掉 `CandidatePaths`/`ResolveSavePath`/`user://` 回落；`:109` `WarnAboutLegacyFile()` 只对旧 `sts2-replica.json` 记一条 Warn、不读不迁移。依据：`ModManager.cs:552-558` 只把 `.json` 当 manifest 解析，`.cfg` 不再被扫，启动噪音消失。
+- 自愈：`ReplicaConfigSync.cs:18` `MaxConfigRequestsPerRun = 5`；同层已试即静默返回（`:135`），计满打一次 `giving up on the host config`，每次补发记 `attempt N/5`；`AttachForRun` 复位每层标志与每局计数（跨层不清零总数）。任何 `INetMessage` 类型名/字段未动。
+- 验收（我本机重跑）：`dotnet build -c Release` 0 警告 0 错误，dll 66048 B，与装入 `mods/sts2-replica/` 的副本逐字节一致；自带 dll 里的 UTF-16 字面量含 `sts2-replica.cfg`、`run settings frozen:`、`giving up on the host config`；无头启动 exit=0，日志 233 行 `legacy ...sts2-replica.json is ignored`、234 `no config file found, using defaults`、236 patches applied、237 initialized（charge_required=3/offer_count=2/start_with_relic=False）、238 fingerprint，全日志 `[ERROR]` 计数 0。
+- 未实测：`.cfg` 首次真实写入（无头不进设置页）；客户端采纳后再冻结、跨层重试计数与 5 次封顶（需双开多局）；描边观感（headless 不渲染）。
+- 旧文件：`mods/config/sts2-replica.json` 由玩家手动删除，本版既不读也不写。
+- 版本：manifest 升到 0.3.0-beta。

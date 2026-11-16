@@ -71,9 +71,10 @@ public sealed class GoodCardReplica : RelicModel
 		{
 			return false;
 		}
-		// In a multiplayer run the host owns these numbers: judging the button from the local file would
-		// answer the same question differently on the two ends.
-		ReplicaConfig config = ReplicaRuntimeConfig.Effective;
+		// The numbers this run froze at run start: a host or a singleplayer run froze its own file, a client
+		// froze the host's copy. A settings change made mid-run deliberately does not move this value, so
+		// both ends keep answering the same question the same way.
+		ReplicaConfig config = ReplicaRuntimeConfig.ForThisRun;
 		try
 		{
 			// No-op once the host's config is in hand; a client's single ask can be dropped while the host
@@ -110,7 +111,7 @@ public sealed class GoodCardReplica : RelicModel
 		Charges = 0;
 		try
 		{
-			ReplicaConfig config = ReplicaRuntimeConfig.Effective;
+			ReplicaConfig config = ReplicaRuntimeConfig.ForThisRun;
 			Player owner = base.Owner;
 			Rng rng = new Rng(owner, base.Id, (ulong)owner.RunState.TotalFloor);
 			List<CardCreationResult> candidates = await ReplicaDeckSampler.BuildCandidatesAsync(owner, config, rng);

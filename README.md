@@ -5,8 +5,8 @@
 
 - 目标游戏版本：v0.113.1（Steam 默认分支，Godot 4）
 - 运行时：游戏自带 mod 加载器（**不需要** BepInEx，**不需要**任何前置框架）
-- 状态：`0.1.0-beta`。已实机验证：游戏能加载模组、初始化无异常、（装 RitsuLib 时）设置页注册成功；
-  **未实机验证**：卡牌奖励界面里的按钮、取样候选、遗物图标观感
+- 状态：`0.3.0-beta`。已实机验证：游戏能加载模组、初始化无异常、（装 RitsuLib 时）设置页注册成功、遗物小图标；
+  **未实机验证**：卡牌奖励界面里的按钮、取样候选、0.3.0 的描边烘焙观感
 
 ## 玩法
 
@@ -54,19 +54,24 @@
 
 ## 设置
 
-配置文件（手改后需重启游戏）：
+配置文件（只有这一个；内容仍是 JSON；手改后需重启游戏）：
 
-1. `<游戏可执行文件目录>\mods\config\sts2-replica.json`
-2. `%AppData%\Slay the Spire 2\sts2-replica\config.json`
+1. `<游戏可执行文件目录>\mods\config\sts2-replica.cfg`
+
+0.3.0 起不再读 `sts2-replica.json`、也不再生它，原来的 `%AppData%\Slay the Spire 2\sts2-replica\config.json`
+回落路径一并取消：升级时请**手动删掉旧文件**，否则里面的自定义值不再生效（日志会给一行 `legacy ... is ignored`）。
+
+**参数在开局时冻结**：改设置只影响之后创建的对局，正在进行的那一局沿用开局时的值；联机局里房主局内改设置
+同样不影响本局，只影响之后创建的对局（客户端用的是房主开局时下发的那份）。
 
 不写文件即全部使用默认值；坏值一律回落默认。全部键位、默认值与容错规则见
 [`docs/config.md`](docs/config.md)：充能阈值 `charge_required`、候选数 `offer_count`、
 五档权重 `weight_*`、开局自带 `start_with_relic`，以及基础牌/状态牌/任务牌/去重等过滤开关。
 
 装了 [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) 时，RitsuLib 的设置界面里会多出
-「好牌多抓」一页，8 个常用项（充能阈值、候选数、五档权重、开局自带）可以直接改；改完立即写回上面那份 JSON，
-**不需要重启游戏**（只有 `start_with_relic` 要等下一次开局）。联机客户端里这一页是**只读**的：显示房主的数值，
-改动不落盘。没装 RitsuLib 就只有 JSON 文件，模组照常编译运行。
+「好牌多抓」一页，8 个常用项（充能阈值、候选数、五档权重、开局自带）可以直接改；改完立即写回上面那份
+`.cfg`，**不需要重启游戏**，但**改动从下一局开始生效**（页面说明里也写了这一句）。联机客户端里这一页是**只读**的：
+显示房主的数值，改动不落盘。没装 RitsuLib 就只有配置文件，模组照常编译运行。
 
 构建开关：默认按本机路径引用 RitsuLib（可用 `-p:RitsuLibDir=...` 覆盖、`-p:RitsuLibReferenceTarget=...` 指定
 compat 版本）；`dotnet build sts2-replica.csproj -c Release -p:EnableRitsuLib=false` 产出完全不引用 RitsuLib、
@@ -80,7 +85,8 @@ compat 版本）；`dotnet build sts2-replica.csproj -c Release -p:EnableRitsuLi
 ## 多人
 
 - **配置以房主为准**：房主开局广播一次模组参数，客户端只在内存里采纳，**不改写**客户端本机的
-  `sts2-replica.json`；客户端的设置页显示房主的数值且只读。充能（`Charges`）是玩家个人的，不同步。
+  `sts2-replica.cfg`；客户端的设置页显示房主的数值且只读。两端都在开局时冻结这组参数，所以房主局内改设置
+  不影响本局，只影响之后创建的对局。充能（`Charges`）是玩家个人的，不同步。
   两端各打一行配置指纹（`host: broadcast config …` / `adopting host config …`），可直接对账；机制见
   [`docs/release.md`](docs/release.md) 的「配置同步」。
 - 所有玩家装**同一版本、同一份模组清单**（握手只比 `id-version`，且消息 id 按类型名排序、只占一字节）。
@@ -97,6 +103,8 @@ compat 版本）；`dotnet build sts2-replica.csproj -c Release -p:EnableRitsuLi
   本模组会**让位**：本次奖励不出现【制模】/【取样】，不会崩。
 - 充能已满且卡组里没有任何可取样卡（例如把基础牌等全部过滤掉）时，按钮不出现。
 - `offer_count` 钳制在 1..3（网格选牌 UI 在 b>3 时未验证）。
+- 图标：小图标的描边已经烘进 PNG，代码把独立的描边层隐藏（不再叠加 `Outline.Texture`）；图鉴/查看屏的大图无描边。
+- 客户端的配置自愈最多每层重试一次、每局封顶 5 次；用满后只留一条 WARN，本局沿用本机参数。
 
 ## 开发
 

@@ -1,13 +1,16 @@
 # 配置说明（ReplicaConfig）
 
-配置文件路径（按顺序探测，命中即用；都不会被创建，缺失即全部使用默认值）：
+配置文件路径（0.3.0 起只有这一个，读与写都认它；文件不会被自动创建，缺失即全部使用默认值）：
 
-1. `<游戏可执行文件目录>/mods/config/sts2-replica.json`
-   （即 `steamapps/common/Slay the Spire 2/mods/config/sts2-replica.json`）
-2. `user://sts2-replica/config.json`
-   （即 `%AppData%/Slay the Spire 2/sts2-replica/config.json`）
+1. `<游戏可执行文件目录>/mods/config/sts2-replica.cfg`
+   （即 `steamapps/common/Slay the Spire 2/mods/config/sts2-replica.cfg`）
 
-加载时机：mod 初始化（`ReplicaMod.Init`）一次。手改文件后需要重启游戏；用下面「游戏内设置页」改则不需要重启。
+内容仍是 JSON，只是扩展名从 `.json` 换成了 `.cfg`。旧名 `sts2-replica.json` **既不读也不写**：
+0.3.0 不迁移它、也不再生成它，升级时请**手动删掉**，否则里面的自定义值不再生效（日志会给一行
+`legacy ... is ignored` 提示）。原来的 `user://sts2-replica/config.json` 回落路径已一并取消。
+
+加载时机：mod 初始化（`ReplicaMod.Init`）一次。手改文件后需要重启游戏；用下面「游戏内设置页」改则不需要重启，
+但同样**从下一局开始生效**（见下「多久生效」）。
 
 ## 键位与默认值
 
@@ -58,14 +61,23 @@
 滑块上限只是界面取值区间，解析器规则不变（`charge_required` 下限 1、`offer_count` 钳制 1..3、
 权重钳制 0..1000000）。
 
-- 写回的文件：优先覆盖**当前正在用的那个候选路径**（见开头两条）；都不存在时写
-  `<游戏可执行文件目录>/mods/config/sts2-replica.json`，目录自动创建。
+- 写回的文件：只有 `<游戏可执行文件目录>/mods/config/sts2-replica.cfg` 一个（见开头），目录自动创建。
 - 写回内容是全部 12 个键，所以设置页没暴露的 4 个过滤开关（`include_basic` / `include_status` /
   `include_quest` / `dedupe`）按当前内存值原样保留，不会因为点了一次滑块被重置。
-- 多久生效：取样、权重、阈值、候选数都在**下一次判定**就生效（`GoodCardReplica` 在判定当下读
-  `ReplicaRuntimeConfig.Effective`：单人局=本机文件，联机客户端=房主广播来的数值）；
-  `start_with_relic` 只在开局事件里读一次（`src/ReplicaMod.cs` 的 `OnRunStarted`），所以
-  **下一次开局**生效。两者都**不需要重启游戏**。
+- 多久生效：**从下一局开始生效**。参数在开局时冻结成一份本局快照，玩法只读这份快照
+  （`ReplicaRuntimeConfig.ForThisRun`：有快照用快照，没有才回落 `Effective`）；`GoodCardReplica` 的
+  两处判定（按钮注入、`OnSample` 取样）读的就是它，所以局内再改设置不改本局玩法，只影响之后创建的对局。
+  快照来源：单人局与房主=本机 `Effective`（`src/ReplicaMod.cs` 的 `OnRunStarted` 里冻结）；
+  联机客户端=房主广播来的那份（`src/Net/ReplicaConfigSync.cs` 采纳成功时冻结）。
+  `start_with_relic` 同样只在开局事件里读一次。都**不需要重启游戏**，但也不会改变正在进行的那一局。
 - 没有 RitsuLib 时这一页不会出现，模组照常编译、照常运行，只认 JSON 文件（构建开关见 README）。
 - 写入失败（目录不可写等）只在日志里留一条 `[sts2-replica] could not write config at ...`，
-  改动仍留在内存里，本次游戏内照样生效。
+  改动仍留在内存里，下一次开局生效。
+
+## 0.3.0 变更
+
+- **参数开局冻结**：配置文件和设置页写的是「下一局用」的值；本局参数在开局那一刻固定，局内改设置只影响之后
+  创建的对局（联机局同理：房主局内改设置不影响正在进行的这一局，只影响之后创建的对局）。
+- **文件名**：`sts2-replica.cfg`（内容仍是 JSON）；旧 `sts2-replica.json` 不读不写，需手动删除。
+- **图标描边**：小图标的描边已经烘进 PNG，代码不再显示独立的描边层（`src/Art/RelicNodeArtPatch.cs`）；
+  图鉴/查看屏的大图无描边。与本节任何键值无关。

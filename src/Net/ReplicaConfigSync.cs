@@ -14,19 +14,28 @@ namespace Sts2Replica.Net;
 /// </summary>
 public static class ReplicaConfigSync
 {
+	/// <summary>自愈重试的每局上限：跨层累计，不随层数清零。</summary>
+	private const int MaxConfigRequestsPerRun = 5;
+
 	private static INetGameService? _attached;
 	private static RunState? _runState;
 	private static bool _loggedMessageIds;
 	private static bool _adoptedHostConfig;
-	private static bool _configReRequested;
+	private static bool _configRequestedThisFloor;
+	private static int _configRequestFloor = -1;
+	private static int _configRequestsThisRun;
+	private static bool _loggedRequestCapReached;
 
 	public static void AttachForRun(RunState state)
 	{
 		_runState = state;
 		// RunStarted fires again on load and the override was cleared just before this call, so the
-		// one-shot self-heal starts over from "nothing adopted yet".
+		// one-shot self-heal starts over from "nothing adopted yet" — including its per-run budget.
 		_adoptedHostConfig = false;
-		_configReRequested = false;
+		_configRequestedThisFloor = false;
+		_configRequestFloor = -1;
+		_configRequestsThisRun = 0;
+		_loggedRequestCapReached = false;
 		INetGameService? service = RunManager.Instance.NetService;
 		NetGameType type = service?.Type ?? NetGameType.None;
 		LogMessageIdsOnce();
@@ -99,6 +108,8 @@ public static class ReplicaConfigSync
 			return;
 		}
 		_adoptedHostConfig = true;
+		// 采纳即冻结：房主给的值就是本局的值，局内再改设置只影响之后创建的局。
+		ReplicaRuntimeConfig.BeginRun(ReplicaRuntimeConfig.Effective);
 		RunState? state = _runState;
 		if (state != null)
 		{
@@ -110,12 +121,29 @@ public static class ReplicaConfigSync
 	/// <summary>
 	/// Self-heal for a client whose ask raced the host's handler registration: vanilla drops a message
 	/// with no handler (NetMessageBus.cs:88), and without this the peer would keep its local numbers for
-	/// the whole run. One attempt per run, made from gameplay rather than from the run-start hook.
+	/// the whole run. One attempt per floor plus a per-run cap of <see cref="MaxConfigRequestsPerRun"/>,
+	/// made from gameplay rather than from the run-start hook.
 	/// </summary>
 	public static void RequestConfigIfMissing()
 	{
-		if (_configReRequested || _adoptedHostConfig || !ReplicaRuntimeConfig.IsMultiplayerClient)
+		if (_adoptedHostConfig || !ReplicaRuntimeConfig.IsMultiplayerClient)
 		{
+			return;
+		}
+		int floor = _runState?.TotalFloor ?? -1;
+		// 本层已经试过就安静等下一次奖励；换层才允许再来一次，避免每次卡牌奖励都发一个包。
+		if (_configRequestedThisFloor && floor == _configRequestFloor)
+		{
+			return;
+		}
+		if (_configRequestsThisRun >= MaxConfigRequestsPerRun)
+		{
+			if (!_loggedRequestCapReached)
+			{
+				_loggedRequestCapReached = true;
+				Log.Warn("[sts2-replica] giving up on the host config: " + _configRequestsThisRun
+					+ " re-requests used this run; this run keeps the local values");
+			}
 			return;
 		}
 		INetGameService? service = RunManager.Instance.NetService;
@@ -124,11 +152,14 @@ public static class ReplicaConfigSync
 			return;
 		}
 		// Set before sending: a refused send must not become one attempt per card reward.
-		_configReRequested = true;
+		_configRequestedThisFloor = true;
+		_configRequestFloor = floor;
+		_configRequestsThisRun++;
 		try
 		{
 			service.SendMessage(new ReplicaConfigRequestMessage());
-			Log.Warn("[sts2-replica] host config missing at first card reward; re-requested (local values in effect until it arrives)");
+			Log.Warn("[sts2-replica] host config missing at floor " + floor + "; re-requested (attempt "
+				+ _configRequestsThisRun + "/" + MaxConfigRequestsPerRun + ", local values in effect until it arrives)");
 		}
 		catch (Exception exception)
 		{

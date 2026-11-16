@@ -64,7 +64,15 @@ public static class ReplicaMod
         try
         {
             ReplicaRuntimeConfig.ClearOverride();
+            // 读档与新开都走这条路径：上一局的快照先作废，再由下面的分支按此刻的配置重新冻结。
+            ReplicaRuntimeConfig.EndRun();
             ReplicaConfigSync.AttachForRun(state);
+            if (!ReplicaRuntimeConfig.IsMultiplayerClient)
+            {
+                // 单人局与房主：本机的 Effective 就是本局的答案，此刻起固定。
+                // 联机客户端要等房主那份到达，由 ReplicaConfigSync 在采纳成功时冻结。
+                ReplicaRuntimeConfig.BeginRun(ReplicaRuntimeConfig.Effective);
+            }
         }
         catch (Exception exception)
         {

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -8,36 +7,37 @@ using MegaCrit.Sts2.Core.Logging;
 namespace Sts2Replica.Config;
 
 /// <summary>
-/// Locates and loads sts2-replica.json. Never throws: an unreadable or missing file
-/// yields <see cref="ReplicaConfig.Default"/>.
+/// Locates and loads sts2-replica.cfg (JSON inside; only the extension changed). Never throws: an
+/// unreadable or missing file yields <see cref="ReplicaConfig.Default"/>.
 /// </summary>
 public static class ReplicaConfigStore
 {
-	private const string FileName = "sts2-replica.json";
+	private const string FileName = "sts2-replica.cfg";
 	private static ReplicaConfig _current = ReplicaConfig.Default;
 
 	public static ReplicaConfig Current => _current;
 
 	public static ReplicaConfig Load()
 	{
-		foreach (string path in CandidatePaths())
+		string path = ResolveConfigPath();
+		WarnAboutLegacyFile(path);
+		if (path.Length > 0)
 		{
 			try
 			{
-				if (!File.Exists(path))
+				if (File.Exists(path))
 				{
-					continue;
+					_current = ReplicaConfig.Parse(File.ReadAllText(path));
+					Log.Info("[sts2-replica] config loaded from " + path);
+					if (Serialize(_current) != Serialize(ReplicaConfig.Default))
+					{
+						// The reward screen syncs an index into a list every peer rebuilds, so the numbers have to
+						// agree: a multiplayer client takes them from the host (ReplicaConfigSync) and ignores this
+						// file until the run ends, while a singleplayer run uses them as they are.
+						Log.Warn("[sts2-replica] non-default config is active; a multiplayer run uses the host's values, so a client's own values apply to singleplayer only");
+					}
+					return _current;
 				}
-				_current = ReplicaConfig.Parse(File.ReadAllText(path));
-				Log.Info("[sts2-replica] config loaded from " + path);
-				if (Serialize(_current) != Serialize(ReplicaConfig.Default))
-				{
-					// The reward screen syncs an index into a list every peer rebuilds, so the numbers have to
-					// agree: a multiplayer client takes them from the host (ReplicaConfigSync) and ignores this
-					// file until the run ends, while a singleplayer run uses them as they are.
-					Log.Warn("[sts2-replica] non-default config is active; a multiplayer run uses the host's values, so a client's own values apply to singleplayer only");
-				}
-				return _current;
 			}
 			catch (Exception exception)
 			{
@@ -57,7 +57,7 @@ public static class ReplicaConfigStore
 	{
 		string json = Serialize(config);
 		_current = ReplicaConfig.Parse(json);
-		string path = ResolveSavePath();
+		string path = ResolveConfigPath();
 		if (path.Length == 0)
 		{
 			Log.Warn("[sts2-replica] no config path available, settings are kept in memory only");
@@ -82,24 +82,48 @@ public static class ReplicaConfigStore
 	}
 
 	/// <summary>
-	/// 写回目标：优先当前正在用的那个候选路径（文件已存在就用它），否则用候选路径里的第一条
-	/// （可执行文件目录下的 mods/config），与 Load() 的查找顺序保持一致。
+	/// 读写的唯一路径：<游戏可执行文件目录>/mods/config/sts2-replica.cfg。0.3.0 起不再有候选路径，
+	/// 也不再回落到 user:// —— 旧名 sts2-replica.json 既不读也不写。
 	/// </summary>
-	private static string ResolveSavePath()
+	private static string ResolveConfigPath()
 	{
-		string fallback = string.Empty;
-		foreach (string path in CandidatePaths())
+		try
 		{
-			if (fallback.Length == 0)
+			string directory = Path.GetDirectoryName(Godot.OS.GetExecutablePath()) ?? string.Empty;
+			if (directory.Length > 0)
 			{
-				fallback = path;
+				return Path.Combine(directory, "mods", "config", FileName);
 			}
-			if (File.Exists(path))
+			Log.Warn("[sts2-replica] the executable directory is unknown; no config file can be read or written");
+		}
+		catch (Exception exception)
+		{
+			Log.Warn("[sts2-replica] could not resolve the executable directory: " + exception.Message);
+		}
+		return string.Empty;
+	}
+
+	/// <summary>
+	/// 旧名文件只提示、不迁移：它留着会让玩家以为自己改的设置还在生效，删不删由玩家决定。
+	/// </summary>
+	private static void WarnAboutLegacyFile(string path)
+	{
+		if (path.Length == 0)
+		{
+			return;
+		}
+		string legacy = Path.ChangeExtension(path, ".json");
+		try
+		{
+			if (File.Exists(legacy))
 			{
-				return path;
+				Log.Warn("[sts2-replica] legacy " + legacy + " is ignored (this build reads " + FileName + " only); delete it by hand");
 			}
 		}
-		return fallback;
+		catch (Exception exception)
+		{
+			Log.Warn("[sts2-replica] could not check for a legacy config: " + exception.Message);
+		}
 	}
 
 	/// <summary>
@@ -127,37 +151,6 @@ public static class ReplicaConfigStore
 				writer.WriteEndObject();
 			}
 			return Encoding.UTF8.GetString(stream.ToArray());
-		}
-	}
-
-	private static IEnumerable<string> CandidatePaths()
-	{
-		string executableConfig = string.Empty;
-		try
-		{
-			string directory = Path.GetDirectoryName(Godot.OS.GetExecutablePath()) ?? string.Empty;
-			executableConfig = Path.Combine(directory, "mods", "config", FileName);
-		}
-		catch (Exception exception)
-		{
-			Log.Warn("[sts2-replica] could not resolve the executable directory: " + exception.Message);
-		}
-		if (executableConfig.Length > 0)
-		{
-			yield return executableConfig;
-		}
-		string userConfig = string.Empty;
-		try
-		{
-			userConfig = Path.Combine(Godot.ProjectSettings.GlobalizePath("user://"), "sts2-replica", "config.json");
-		}
-		catch (Exception exception)
-		{
-			Log.Warn("[sts2-replica] could not resolve the user directory: " + exception.Message);
-		}
-		if (userConfig.Length > 0)
-		{
-			yield return userConfig;
 		}
 	}
 }

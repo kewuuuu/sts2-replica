@@ -73,10 +73,26 @@
 4. **两端各一行配置指纹**：`Fingerprint()` 输出 `a=… b=… w=…/…/…/…/… start=… basic=… status=… quest=… dedupe=… h=<FNV-1a 32>`；
    房主广播时、客户端采纳时、单人局跳过时各打一次。实现：`src/Config/ReplicaRuntimeConfig.cs`。
 5. **充能不同步**：`Charges` 仍是个人 `[SavedProperty]`，同步的只有 12 个配置字段。
-   实现：`src/Models/GoodCardReplica.cs`（改读 `Effective`，充能逻辑不变）。
+   实现：`src/Models/GoodCardReplica.cs`（v0.3 起改读 `ForThisRun` 的本局快照，充能逻辑不变）。
 
 消息与接线：`src/Net/ReplicaConfigMessage.cs`（房主→客户端，12 字段，Reliable/Info）、
 `src/Net/ReplicaConfigRequestMessage.cs`（客户端→房主，空载荷，Reliable/VeryDebug）、
 `src/Net/ReplicaConfigSync.cs`（按 `INetGameService` 实例幂等注册；单人/回放直接跳过；房主收到请求再广播一次）。
 时序假设：`RunStarted` 在读档时也触发，所以中途加入复用同一路径；客户端的 `start_with_relic` 发放被推迟到
 采纳房主配置之后（`ReplicaMod.OnHostConfigAdopted`），否则两端遗物集合可能不同。
+
+## 7. v0.3.0-beta 变更
+
+1. **参数开局冻结**：`ReplicaRuntimeConfig` 增加本局快照（`BeginRun` / `EndRun` / `ForThisRun`）。
+   单人局与房主在 `ReplicaMod.OnRunStarted` 里 `BeginRun(Effective)`；联机客户端在 `ReplicaConfigSync`
+   采纳房主配置成功时（含"采纳成功后立刻生效"那条路径）`BeginRun(Effective)`。
+   `ForThisRun` 有快照用快照、无快照回落 `Effective`，`Effective` 语义不变。读取点只改
+   `GoodCardReplica` 的两处（按钮注入判定、`OnSample` 取样）；设置页与网络侧继续用 `Effective`。
+   不新增局内广播，也没有改动任何既有 `INetMessage` 类型的名字或字段（消息 id 按类型名排序分配）。
+2. **配置文件名**：`mods/config/sts2-replica.cfg`（内容仍是 JSON）。旧 `sts2-replica.json` 与
+   `user://sts2-replica/config.json` 都不再读写，升级时手动删旧文件。
+3. **小图标描边**：描边已烘进 PNG，`RelicNodeArtPatch` 的 Small 分支不再写 `Outline.Texture`，并把
+   `Outline.Visible` 置 false（原版 `NRelic.Reload` 在 Small 分支先置 true，`NRelic.cs:146-147`）。
+   Large 分支保持现状：图鉴大图无描边。
+4. **配置自愈重试**：`ReplicaConfigSync.RequestConfigIfMissing` 改为「每层最多一次 + 每局累计封顶 5 次」；
+   每局起点在 `AttachForRun` 里复位，跨层不清零总数，超限打一条 WARN 并沿用本机参数。

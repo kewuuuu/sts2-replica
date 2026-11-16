@@ -1,11 +1,25 @@
-# 发布（0.1.0-beta）
+# 发布（0.3.0-beta）
+
+## 0.3.0-beta 变更（相对 0.2.0-beta）
+
+1. **参数开局冻结**：模组参数在开局那一刻固定成一份本局快照（`ReplicaRuntimeConfig.ForThisRun`）。
+   局内改设置（设置页或手改文件）**不影响正在进行的那一局**，只影响之后创建的对局；联机局以房主开局时
+   下发的那份为准，房主局内改设置同样不影响本局。单人局/房主在 `ReplicaMod.OnRunStarted` 冻结本机
+   `Effective`，客户端在 `ReplicaConfigSync` 采纳房主配置成功时冻结。
+2. **配置文件名**：`mods/config/sts2-replica.cfg`（内容仍是 JSON）。旧 `sts2-replica.json` 既不读也不写，
+   升级时**手动删除**；原来的 `%AppData%\Slay the Spire 2\sts2-replica\config.json` 回落路径也取消。
+3. **小图标描边**：描边已经烘进 PNG，代码不再显示独立的描边层（`RelicNodeArtPatch` 里 Small 分支把
+   `Outline.Visible` 置 false 且不再写 `Outline.Texture`）；图鉴/查看屏的大图（Large）保持无描边。
+4. **配置自愈重试**：`ReplicaConfigSync.RequestConfigIfMissing` 从「每层最多一次」收紧为「每层最多一次
+   且每局累计封顶 5 次」，超限只打一条 WARN 并沿用本机参数。
+5. **设置页文案**：页面说明补上「改动从下一局开始生效」；仍是拖动即写盘，不是只读。
 
 ## 包内容
 
 `tools/pack-release.ps1` 会先构建，再把 `dist/sts2-replica/` 打成一个 zip：
 
 ```
-dist/sts2-replica-0.1.0-beta.zip
+dist/sts2-replica-0.3.0-beta.zip
 └── sts2-replica/
     ├── sts2-replica.dll      # 模组本体（图标 PNG 已内嵌）
     └── sts2-replica.json     # manifest（id/version/min_game_version/affects_gameplay）
@@ -19,7 +33,9 @@ dist/sts2-replica-0.1.0-beta.zip
 1. 解压到 `<Steam>\steamapps\common\Slay the Spire 2\mods\`，得到 `mods\sts2-replica\sts2-replica.{dll,json}`。
 2. 启动游戏，日志 `%AppData%\SlayTheSpire2\logs\godot.log` 应出现 `[sts2-replica] initialized` 行。
    用 `tools/check-log.ps1` 一条命令筛出来。
-3. 卸载 = 删除 `mods\sts2-replica\` 目录；配置在 `mods\config\sts2-replica.json`，一并删掉即恢复默认。
+3. 卸载 = 删除 `mods\sts2-replica\` 目录；配置在 `mods\config\sts2-replica.cfg`，一并删掉即恢复默认。
+   0.3.0 起不再读写旧名 `mods\config\sts2-replica.json`，升级时请手动删掉它（不删也不报错，只是不再生效，
+   日志会给一行 `legacy ... is ignored`）。
 
 ## 验证状态（照实写）
 
@@ -32,24 +48,29 @@ dist/sts2-replica-0.1.0-beta.zip
 - 配置读取与默认值生效；`GoodCardReplica` 进入共享遗物池排队；
 - 装 RitsuLib 0.6.13 时设置页注册成功（`RitsuLib settings page registered: mod_id=sts2-replica, page_id=replica-settings`）；
 - 无异常/无 `[ERROR]` 指向本模组；JSON-only 构建同样正常初始化。
-- `0.1.0-beta` 与 `0.2.0-beta` 都能通过 `SemanticVersion` 解析：完整日志里**没有** `declares version ... which is not a valid
+- `0.1.0-beta` / `0.2.0-beta` / `0.3.0-beta` 都能通过 `SemanticVersion` 解析：完整日志里**没有** `declares version ... which is not a valid
   Semantic Version` 警告。游戏内模组列表那一行显示的是 `(0.1.0)`（推测该列表只拼 Major.Minor.Patch；
   `SemanticVersion.ToString()` 本身会保留 `-beta`，见 `MegaCrit.Sts2.Core.Debug/SemanticVersion.cs:243-255`），属显示差异，不影响加载。
+  0.3.0-beta 只做过程序集替换后的无头启动（模组加载、补丁 3/3、配置路径）验证，没有重跑那份模组列表截图。
 
 **未实机验证**（首次上手请注意）：
 
 - 卡牌奖励界面里【制模】/【取样】按钮的实际显示与点击流程；
 - 取样网格的候选项、取消是否退还充能；
-- 遗物图标的大图（`BigIcon`，图鉴/查看屏）观感——小图标与描边已实机确认；
-- 双端联机实测（源码级评审已完成，见下节「多人联机」；双开验证未做）。本轮新增的配置同步同样只有源码级结论：
+- 遗物图标的大图（`BigIcon`，图鉴/查看屏）观感——小图标已实机确认；0.3.0 把小图标的描边烘进 PNG
+  并隐藏了独立的描边层，这一版**新增**的观感（含图鉴大图无描边）尚未实机复核；
+- 双端联机实测（源码级评审已完成，见下节「多人联机」；双开验证未做）。配置同步同样只有源码级结论：
   消息是否真的到达对端、中途加入/读档是否真的重放，都要双开才能确认。
+- 0.3.0 的「开局冻结」与「每层一次 / 每局 5 次」自愈重试同样只有源码级结论：单人局的开局冻结能靠无头启动
+  看日志（`run settings frozen: ...`），客户端采纳后再冻结、以及跨层的重试计数，只有双开才能验。
 
 > 排查日志提示：`godot.log` **每次启动都轮转**——旧内容会被改名成同目录的 `godot<时间戳>.log`，
 > 新进程从头写 `godot.log`。所以「上次启动还在这儿、这次没了」是正常的，不是模组失灵。
 
 ## 已知问题
 
-- 设置页是「拖动即写盘」：每次值变化都立刻落 `mods/config/sts2-replica.json`。开发期出现过大一次无头启动后
+- 设置页是「拖动即写盘」：每次值变化都立刻落 `mods/config/sts2-replica.cfg`（0.3.0 起写盘不等于本局生效，
+  见上面「0.3.0-beta 变更」第 1 条）。开发期出现过大一次无头启动后
   文件被写成 `charge_required: 2` / `start_with_relic: true`（默认 3 / false）的情况，带日志连续三次干净启动均未复现。
   写回调现在会记 `[sts2-replica] settings write <key>=<value>`，下次出现时按该行定位；文件本身只影响本机玩法，不写坏存档。
 - 手改 JSON 时非法值一律回落到默认并在日志留痕（`ReplicaConfig.Parse`），不会抛异常中断启动。
@@ -73,9 +94,10 @@ dist/sts2-replica-0.1.0-beta.zip
 
 ## 多人联机
 
-**配置跟着房主走**（v0.2 起）：模组参数（`charge_required` / `offer_count` / 五档权重 /
+**配置跟着房主走**（v0.2 起，v0.3 起冻结）：模组参数（`charge_required` / `offer_count` / 五档权重 /
 `start_with_relic` / 三个过滤开关 / `dedupe`）在联机局里以**房主**为准，客户端只在内存里采纳房主的数值，
-**不会改写客户端本机的 `sts2-replica.json`**。充能（`Charges`）仍是玩家个人的，不参与同步。
+**不会改写客户端本机的 `sts2-replica.cfg`**。两端都在**开局那一刻**冻结这组参数（`ForThisRun`），
+所以房主局内改设置不影响正在进行的那一局，只影响之后创建的对局。充能（`Charges`）仍是玩家个人的，不参与同步。
 机制与日志见下面「配置同步」。
 
 玩法路径仍与原版 PaelsWing 同构：不自造任何**玩法**网络消息，卡牌/奖励/战斗动作全靠「各端同构执行 + 索引同步」。
@@ -140,19 +162,23 @@ dist/sts2-replica-0.1.0-beta.zip
 
 边界：
 
-- **客户端的 `sts2-replica.json` 不会被改写**：所有写入都走 `ReplicaRuntimeConfig.TryWriteLocal`，联机客户端
+- **客户端的 `sts2-replica.cfg` 不会被改写**：所有写入都走 `ReplicaRuntimeConfig.TryWriteLocal`，联机客户端
   直接拒绝并记一条 `settings write refused`（每局一次）。
 - **客户端设置页只读**：页面显示房主的数值，拖动/切换不落盘、不改显示值，只记一条
   `settings page is read-only this run`。
-- **房主**：设置页照常写盘；房主在局内改的值立刻成为本局"生效配置"，但只在客户端下次请求时才会广播出去
-  （已经在局内的客户端不会收到推送）——改配置最好在开局前做完。
+- **房主**：设置页照常写盘，但写盘 ≠ 本局生效：本局参数在 `RunStarted` 已冻结（日志 `run settings frozen: ...`），
+  局内改的值只影响**之后创建的对局**；房主局内改设置既不改本局，也不推送给已经在局内的客户端
+  （广播发生在下次 `RunStarted` 与客户端请求时）——要让一局用上新值，开局前改完即可。
+- **自愈重试有上限**：客户端在卡牌奖励处发现还没拿到房主配置时会主动再请求，规则是**每层最多一次、
+  每局累计最多 5 次**（每局起点在 `AttachForRun` 复位，跨层不清零总数）。用满 5 次后只打一条
+  `giving up on the host config ... this run keeps the local values`，本局就一直用本机参数，不再发包。
 - 充能不同步：`Charges` 仍是 `[SavedProperty]`，进校验和与重连包（`NetFullCombatState.cs:186/486-491`、
   `SerializableRelic.cs:9-33`）。
 
 ## 版本号与兼容
 
 - 版本号是语义化版本，游戏用 `SemanticVersion.TryFromString` 解析（`MegaCrit.Sts2.Core.Debug/SemanticVersion.cs:41`），
-  `0.1.0-beta` 这类 prerelease 合法；解析失败会记 `declares version ... which is not a valid Semantic Version`。
+  `0.3.0-beta` 这类 prerelease 合法；解析失败会记 `declares version ... which is not a valid Semantic Version`。
 - `min_game_version` = `0.113.1`：当前 Steam 默认分支。游戏大版本更新后需要复核反编译 API 再抬版本。
 - `affects_gameplay: true`（也是字段缺省值，见 `MegaCrit.Sts2.Core.Modding/ModManifest.cs:43`）：本模组改玩法，
   多人局必须人人安装同版本。

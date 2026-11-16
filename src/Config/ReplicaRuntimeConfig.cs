@@ -14,9 +14,41 @@ namespace Sts2Replica.Config;
 public static class ReplicaRuntimeConfig
 {
 	private static ReplicaConfig? _hostOverride;
+	private static ReplicaConfig? _runSnapshot;
 	private static bool _warnedRejectedWrite;
 
 	public static ReplicaConfig Effective => _hostOverride ?? ReplicaConfigStore.Current;
+
+	/// <summary>
+	/// The values this run is played with: frozen when the run started, so a settings change made mid-run
+	/// reaches the next run instead of moving numbers two peers already agreed on. Falls back to
+	/// <see cref="Effective"/> before any run has started and on a client still waiting for the host.
+	/// </summary>
+	public static ReplicaConfig ForThisRun => _runSnapshot ?? Effective;
+
+	/// <summary>
+	/// Freezes this run's values. Called from ReplicaMod.OnRunStarted for a singleplayer run or a host, and
+	/// from ReplicaConfigSync once a client has adopted the host's values.
+	/// </summary>
+	public static void BeginRun(ReplicaConfig config)
+	{
+		_runSnapshot = config;
+		Log.Info("[sts2-replica] run settings frozen: " + Fingerprint(config));
+	}
+
+	/// <summary>
+	/// Drops the frozen values, so the next run reads whatever the file holds by then. Called from the
+	/// RunStarted hook ahead of <see cref="BeginRun"/>: loading a save starts a run through the same path.
+	/// </summary>
+	public static void EndRun()
+	{
+		if (_runSnapshot == null)
+		{
+			return;
+		}
+		_runSnapshot = null;
+		Log.Info("[sts2-replica] run settings released; a later run takes the settings as they are then");
+	}
 
 	/// <summary>
 	/// True only while this peer is a client of a multiplayer run. NetService is still null until a run
