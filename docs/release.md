@@ -38,7 +38,8 @@ dist/sts2-replica-0.1.0-beta.zip
 - 卡牌奖励界面里【制模】/【取样】按钮的实际显示与点击流程；
 - 取样网格的候选项、取消是否退还充能；
 - 遗物图标（小图标/描边/大图）的实际观感；
-- 双端联机实测（源码级评审已完成，见下节「多人联机」；双开验证未做）。
+- 双端联机实测（源码级评审已完成，见下节「多人联机」；双开验证未做）。本轮新增的配置同步同样只有源码级结论：
+  消息是否真的到达对端、中途加入/读档是否真的重放，都要双开才能确认。
 
 ## 已知问题
 
@@ -66,15 +67,21 @@ dist/sts2-replica-0.1.0-beta.zip
 
 ## 多人联机
 
-源码级评审（v0.113.1 反编译核对）结论：本模组**不自造任何网络消息**，全部行为靠「各端同构执行 + 索引同步」，
-与原版 PaelsWing 同构。由此带来三条硬要求：
+**配置跟着房主走**（v0.2 起）：模组参数（`charge_required` / `offer_count` / 五档权重 /
+`start_with_relic` / 三个过滤开关 / `dedupe`）在联机局里以**房主**为准，客户端只在内存里采纳房主的数值，
+**不会改写客户端本机的 `sts2-replica.json`**。充能（`Charges`）仍是玩家个人的，不参与同步。
+机制与日志见下面「配置同步」。
 
-1. **所有玩家装同一版本**：握手只比 `id-version` 字符串（`ModManager.cs:1133-1142` → `HandshakeManager.cs:119-125`），
-   装/不装、版本不同都会被拒绝入局。
-2. **所有玩家用同一份 `sts2-replica.json`**：奖励界面同步的只是**选项索引**（`CardReward.cs:230-231/:235/:256/:297`），
-   对端用本地配置**重建**选项列表。`charge_required` 不同 → 两端跑不同分支（加卡 vs 充能 +1）；
-   `offer_count`/权重不同 → 对端按同一索引取到**另一张卡**（静默错卡）。握手不比配置，
-   故加载时若配置非默认会打一条 `non-default config is active` 警告（`src/Config/ReplicaConfigStore.cs` 的 `Load()`）。
+玩法路径仍与原版 PaelsWing 同构：不自造任何**玩法**网络消息，卡牌/奖励/战斗动作全靠「各端同构执行 + 索引同步」。
+由此剩下三条硬要求：
+
+1. **所有玩家装同一版本、同一份模组清单**：握手只比 `id-version` 字符串（`ModManager.cs:1133-1142` →
+   `HandshakeManager.cs:119-125`），装/不装、版本不同都会被拒绝入局。另一层更硬的原因：消息类型 id 按
+   **类型名排序**分配（`NetTypeCache.cs:22`），且 id 只占**一个字节**（`NetMessageBus.cs:46`）——模组清单不同会让
+   同一条消息在两端落到不同 id。
+2. **配置不再要求各端同一份 JSON**：客户端在 `RunStarted` 时向房主请求配置并采纳，设置页在客户端显示房主的
+   数值且写入被拒绝。唯一的时序例外是 `start_with_relic`：客户端的发放被推迟到采纳房主配置之后
+   （`RelicCmd.Obtain` 不发任何网络消息，`RelicCmd.cs:35-55`），否则两端遗物集合可能不同。
 3. **同时持有 PaelsWing 或 Driftwood 时本模组按钮让位（消失）**：PaelsWing 无条件加第三个选项
    （`Models.Relics/PaelsWing.cs:79`），Driftwood 让 `CanReroll` 成真（`Driftwood.cs:22`），而原版
    `CardRewardAlternative.Generate` 在 3 项时抛 `InvalidOperationException`（`CardRewardAlternative.cs:74-77`）。
@@ -82,9 +89,59 @@ dist/sts2-replica-0.1.0-beta.zip
 
 已核实为安全的点：`Charges` 是 `[SavedProperty]`，进校验和与重连包（`NetFullCombatState.cs:186/486-491`、
 `SerializableRelic.cs:9-33`），无需显式同步；取样 Rng 由 `RunState.Rng.Seed + 玩家槽位 + 遗物 Id + 楼层` 派生
-（`Rng.cs:61-64`），不推进原版奖励链；`start_with_relic` 靠各端各自 `RunStarted` 发放
-（`RelicCmd.Obtain` 全程无网络消息，`RelicCmd.cs:35-55`），并在 `TotalFloor > 0`（读档）时跳过。
+（`Rng.cs:61-64`），不推进原版奖励链；`start_with_relic` 由房主在 `RunStarted` 发放、客户端在采纳房主配置后发放
+（`RelicCmd.Obtain` 全程无网络消息，`RelicCmd.cs:35-55`；客户端推迟发放正是为了让两端遗物集合一致），
+两处都在 `TotalFloor > 0`（读档）时跳过。
 已知限制：同一玩家同一楼层取样两次，候选完全相同（派生 Rng 的 mixin 只含楼层）。
+
+## 配置同步（v0.2）
+
+两条消息（`src/Net/`）：
+
+| 消息 | 方向 | 载荷 | Mode / LogLevel |
+| --- | --- | --- | --- |
+| `ReplicaConfigMessage` | 房主 → 客户端 | 12 个配置字段 | Reliable / Info |
+| `ReplicaConfigRequestMessage` | 客户端 → 房主 | 无 | Reliable / VeryDebug |
+
+- 方向语义直接来自 `INetGameService.SendMessage<T>(T)`：客户端发只到房主，房主发广播给所有客户端
+  （`INetGameService.cs:62-68`）。所以不需要 `HostId`，"谁说了算"由类型决定。
+- 时机是 `RunManager.RunStarted`（`RunManager.cs:316`）——**读档也会触发**（`RunManager.cs:788`、`NGame.cs:1182`），
+  所以"中途加入/读档"复用同一条路径。房主广播一次；客户端注册处理器后发一次请求；房主每收到一次请求再广播
+  一次，这就是中途加入者能对齐的原因。
+- 两侧都可能先到：先发的那条若早于对端注册处理器，原版会丢包并记一条
+  `... but no message handlers are registered for that type!`（`NetMessageBus.cs:88`）；另一方向随后仍会收敛，
+  最终两端都拿到房主的配置。
+- 模组消息由 `MessageTypes.Initialize()` 反射发现（`MessageTypes.cs:13-19`，在 `OneTimeInitialization.cs:84` 调用），
+  id 按**类型名排序**分配（`NetTypeCache.cs:22`）。`ModManager.Initialize` 在前、`MessageTypes.Initialize` 在后，
+  所以模组 `Init()` 里读 id 会抛 `InvalidOperationException`；本模组在第一次 `RunStarted` 时才在 try/catch 里读一次。
+- 房主配置越界（手改 JSON、或别的模组代发）时**钳制并记 WARN**，不拒绝开局：客户端采纳前先跑
+  `ReplicaConfig.Normalized()`。房主自己那份在 `ReplicaConfig.Parse` 里就已经被钳制过。
+
+两端各打一行指纹，可以直接对账（`h` 相同即配置一致）：
+
+```
+[sts2-replica] message type ReplicaConfigMessage id=NN
+[sts2-replica] message type ReplicaConfigRequestMessage id=NN
+[sts2-replica] host: broadcast config a=3 b=2 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
+[sts2-replica] adopting host config from player 7656119…: a=3 b=2 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
+[sts2-replica] client: asked the host for its config
+[sts2-replica] singleplayer: settings stay local; a=3 b=2 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
+```
+
+指纹格式固定：`a` = `charge_required`，`b` = `offer_count`，`w` = 白/蓝/金/无色/诅咒五档权重，
+`start`/`basic`/`status`/`quest`/`dedupe` 是 0/1 开关，`h` 是这串正文的 FNV-1a 32 位（十六进制，
+不用 `string.GetHashCode`：它按进程随机化，两台机器永远对不上）。
+
+边界：
+
+- **客户端的 `sts2-replica.json` 不会被改写**：所有写入都走 `ReplicaRuntimeConfig.TryWriteLocal`，联机客户端
+  直接拒绝并记一条 `settings write refused`（每局一次）。
+- **客户端设置页只读**：页面显示房主的数值，拖动/切换不落盘、不改显示值，只记一条
+  `settings page is read-only this run`。
+- **房主**：设置页照常写盘；房主在局内改的值立刻成为本局"生效配置"，但只在客户端下次请求时才会广播出去
+  （已经在局内的客户端不会收到推送）——改配置最好在开局前做完。
+- 充能不同步：`Charges` 仍是 `[SavedProperty]`，进校验和与重连包（`NetFullCombatState.cs:186/486-491`、
+  `SerializableRelic.cs:9-33`）。
 
 ## 版本号与兼容
 

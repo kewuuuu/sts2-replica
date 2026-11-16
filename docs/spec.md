@@ -44,7 +44,7 @@
 
 ## 4. 硬约束
 
-- 多人兼容必须考虑：所有随机必须走**多人一致的 Rng/上下文**（本实现用 `new Rng(player, relic.Id, (ulong)RunState.TotalFloor)`），不得用本地 `new Random()`；不新造网络消息（v0.113.1 的 PaelsWing 亦无自建同步，照抄其写法即可）。
+- 多人兼容必须考虑：所有随机必须走**多人一致的 Rng/上下文**（本实现用 `new Rng(player, relic.Id, (ulong)RunState.TotalFloor)`），不得用本地 `new Random()`；不新造**玩法**网络消息（v0.113.1 的 PaelsWing 亦无自建同步，照抄其写法即可）；唯一例外是模组参数同步的两条消息（见第 6 节），它们只承载设置，不承载任何卡牌/奖励/战斗动作。
 - **拿卡路径禁止调用 `RewardSynchronizer.SyncLocalObtainedCard`**（v0.113.1 实证，本轮修正）：原版 `CardReward.OnSelect()` 拿卡只做 `CardPileCmd.Add(obtainedCard, PileType.Deck)`（CardReward.cs:279），而该同步消息的远端处理自己会 `RunState.AddCard` + `CardPileCmd.Add`（RewardSynchronizer.cs:210-211）⇒ 再发一次会让远端**重复加卡**；且它在联机战斗中会直接抛异常（RewardSynchronizer.cs:84-87）。原版唯一调用点是商人场景的 CrystalSphereCurse.cs:23。选择同步由 `CardSelectCmd.FromSimpleGridForRewards` 内部的 PlayerChoice 机制负责（:154 ReserveChoiceId / :181 SyncLocalChoice / :186 WaitForRemoteChoice）。
 - alternative 按钮总数上限 2：注入前 `if (alternatives.Count >= 2) return;` 防御（Skip 已占 1 位；Driftwood 的 REROLL 会让它先到 2）；另需 `player.GetRelic<PaelsWing>() != null` 时让位，因为 `PaelsWing.cs:79` 无条件加第三项会让原版 `CardRewardAlternative.cs:74-77` 抛异常（我们自己排在它前面时）。
 - **选项数量不得依赖本地配置**：充能不足或无可用模板时也注入 MOLD，永不 return false（除上面两条让位）。理由：奖励屏同步的只是索引（`CardReward.cs:256`），对端用本地配置重建列表，长度不一致会变成对端的 bad-index 错误。
@@ -59,4 +59,24 @@
 4. 同时持有 Driftwood / PaelsWing 时不抛 "More than 2 card reward alternatives"（本模组按钮让位、消失，属预期）。
 5. 设置改成 a=1/b=3 等极端值不崩，权重全 0 时有安全兜底（退回等概率或取消按钮）。
 6. 存读档后充能层数保持（`[SavedProperty]`）。
-7. 双客户端联机：一方制模/取样，另一方界面与 run 状态一致。
+7. 双客户端联机：一方制模/取样，另一方界面与 run 状态一致；两端日志各有一行配置指纹（`h=` 相同），客户端设置页显示房主数值且写入不落盘。
+
+## 6. 多人配置同步（v0.2 决策）
+
+1. **房主权威**：生效配置 = 房主下发的覆盖 ?? 本机文件（`ReplicaRuntimeConfig.Effective`）；客户端只在内存里
+   持有覆盖，不落盘。实现：`src/Config/ReplicaRuntimeConfig.cs`。
+2. **客户端 JSON 不改写、设置页只读**：所有写入走 `TryWriteLocal`（联机客户端返回 false + 一条 WARN）；
+   设置页读 `Effective`，因此显示房主数值。实现：`src/Config/ReplicaRuntimeConfig.cs`、
+   `src/Integration/RitsuLibSettingsPage.cs`。
+3. **房主配置越界 → 钳制 + WARN，不拒绝开局**：`ReplicaConfig.Normalized()` 只在网络入口使用，`Parse` 行为不变。
+   实现：`src/Config/ReplicaConfig.cs`、`src/Net/ReplicaConfigSync.cs`。
+4. **两端各一行配置指纹**：`Fingerprint()` 输出 `a=… b=… w=…/…/…/…/… start=… basic=… status=… quest=… dedupe=… h=<FNV-1a 32>`；
+   房主广播时、客户端采纳时、单人局跳过时各打一次。实现：`src/Config/ReplicaRuntimeConfig.cs`。
+5. **充能不同步**：`Charges` 仍是个人 `[SavedProperty]`，同步的只有 12 个配置字段。
+   实现：`src/Models/GoodCardReplica.cs`（改读 `Effective`，充能逻辑不变）。
+
+消息与接线：`src/Net/ReplicaConfigMessage.cs`（房主→客户端，12 字段，Reliable/Info）、
+`src/Net/ReplicaConfigRequestMessage.cs`（客户端→房主，空载荷，Reliable/VeryDebug）、
+`src/Net/ReplicaConfigSync.cs`（按 `INetGameService` 实例幂等注册；单人/回放直接跳过；房主收到请求再广播一次）。
+时序假设：`RunStarted` 在读档时也触发，所以中途加入复用同一路径；客户端的 `start_with_relic` 发放被推迟到
+采纳房主配置之后（`ReplicaMod.OnHostConfigAdopted`），否则两端遗物集合可能不同。

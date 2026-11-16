@@ -24,6 +24,8 @@ internal static class RitsuLibSettingsPage
     /// <summary>五档权重滑块的上限。默认值最大为 6，100 已足够拉开差距，也避免滑块步数过多。</summary>
     private const int WeightMax = 100;
 
+    private static bool _loggedReadOnly;
+
     /// <summary>
     /// 设置页入口：RitsuLib 没加载时只留一条警告；注册过程中任何异常也只留一条警告。
     /// </summary>
@@ -65,12 +67,11 @@ internal static class RitsuLibSettingsPage
 
     private static void Register()
     {
-        DraftConfig draft = new DraftConfig(ReplicaConfigStore.Current);
-
         ModSettingsPageBuilder builder = new ModSettingsPageBuilder(ReplicaMod.ModId, PageId);
         builder.WithTitle(ModSettingsText.Literal("好牌多抓"));
         builder.WithDescription(ModSettingsText.Literal(
-            "改动会立刻写回 sts2-replica.json。取样相关数值在下一次判定时生效，开局自带遗物在下一次开局时生效。"));
+            "改动会立刻写回 sts2-replica.json。取样相关数值在下一次判定时生效，开局自带遗物在下一次开局时生效。"
+            + "联机时以房主配置为准：客户端这里显示的是房主的数值，写入不会改动本机文件。"));
         builder.WithModDisplayName(ModSettingsText.Literal("好牌多抓 / Good Card Replica"));
 
         builder.AddSection("sampling", section =>
@@ -79,7 +80,7 @@ internal static class RitsuLibSettingsPage
             section.AddIntSlider(
                 "charge_required",
                 ModSettingsText.Literal("充能阈值 a"),
-                IntBinding(draft, "charge_required", () => draft.ChargeRequired, (target, value) => target.ChargeRequired = value),
+                IntBinding("charge_required", () => ReplicaRuntimeConfig.Effective.ChargeRequired, (target, value) => target.ChargeRequired = value),
                 ChargeRequiredMin,
                 ChargeRequiredMax,
                 1,
@@ -88,7 +89,7 @@ internal static class RitsuLibSettingsPage
             section.AddIntSlider(
                 "offer_count",
                 ModSettingsText.Literal("取样候选数 b"),
-                IntBinding(draft, "offer_count", () => draft.OfferCount, (target, value) => target.OfferCount = value),
+                IntBinding("offer_count", () => ReplicaRuntimeConfig.Effective.OfferCount, (target, value) => target.OfferCount = value),
                 1,
                 ReplicaConfig.OfferCountMax,
                 1,
@@ -97,7 +98,7 @@ internal static class RitsuLibSettingsPage
             section.AddIntSlider(
                 "weight_common",
                 ModSettingsText.Literal("白卡权重 c"),
-                IntBinding(draft, "weight_common", () => draft.WeightCommon, (target, value) => target.WeightCommon = value),
+                IntBinding("weight_common", () => ReplicaRuntimeConfig.Effective.WeightCommon, (target, value) => target.WeightCommon = value),
                 0,
                 WeightMax,
                 1,
@@ -106,7 +107,7 @@ internal static class RitsuLibSettingsPage
             section.AddIntSlider(
                 "weight_uncommon",
                 ModSettingsText.Literal("蓝卡权重 d"),
-                IntBinding(draft, "weight_uncommon", () => draft.WeightUncommon, (target, value) => target.WeightUncommon = value),
+                IntBinding("weight_uncommon", () => ReplicaRuntimeConfig.Effective.WeightUncommon, (target, value) => target.WeightUncommon = value),
                 0,
                 WeightMax,
                 1,
@@ -115,7 +116,7 @@ internal static class RitsuLibSettingsPage
             section.AddIntSlider(
                 "weight_rare",
                 ModSettingsText.Literal("金卡权重 e"),
-                IntBinding(draft, "weight_rare", () => draft.WeightRare, (target, value) => target.WeightRare = value),
+                IntBinding("weight_rare", () => ReplicaRuntimeConfig.Effective.WeightRare, (target, value) => target.WeightRare = value),
                 0,
                 WeightMax,
                 1,
@@ -124,7 +125,7 @@ internal static class RitsuLibSettingsPage
             section.AddIntSlider(
                 "weight_colorless",
                 ModSettingsText.Literal("无色牌权重 f"),
-                IntBinding(draft, "weight_colorless", () => draft.WeightColorless, (target, value) => target.WeightColorless = value),
+                IntBinding("weight_colorless", () => ReplicaRuntimeConfig.Effective.WeightColorless, (target, value) => target.WeightColorless = value),
                 0,
                 WeightMax,
                 1,
@@ -133,7 +134,7 @@ internal static class RitsuLibSettingsPage
             section.AddIntSlider(
                 "weight_curse",
                 ModSettingsText.Literal("诅咒权重 g"),
-                IntBinding(draft, "weight_curse", () => draft.WeightCurse, (target, value) => target.WeightCurse = value),
+                IntBinding("weight_curse", () => ReplicaRuntimeConfig.Effective.WeightCurse, (target, value) => target.WeightCurse = value),
                 0,
                 WeightMax,
                 1,
@@ -147,7 +148,7 @@ internal static class RitsuLibSettingsPage
             section.AddToggle(
                 "start_with_relic",
                 ModSettingsText.Literal("开局自带遗物"),
-                BoolBinding(draft, "start_with_relic", () => draft.StartWithRelic, (target, value) => target.StartWithRelic = value),
+                BoolBinding("start_with_relic", () => ReplicaRuntimeConfig.Effective.StartWithRelic, (target, value) => target.StartWithRelic = value),
                 ModSettingsText.Literal("每个玩家在开局直接获得一个「好牌多抓」；下一次开局生效。"),
                 () => true);
         });
@@ -157,7 +158,6 @@ internal static class RitsuLibSettingsPage
     }
 
     private static IModSettingsValueBinding<int> IntBinding(
-        DraftConfig draft,
         string dataKey,
         Func<int> read,
         Action<DraftConfig, int> write)
@@ -166,19 +166,12 @@ internal static class RitsuLibSettingsPage
             ReplicaMod.ModId,
             dataKey,
             read,
-            value =>
-            {
-                Log.Info("[sts2-replica] settings write " + dataKey + "=" + value);
-                write(draft, value);
-                draft.IsDirty = true;
-                Persist(draft);
-            },
-            () => Persist(draft),
+            value => WriteLocal(dataKey, target => write(target, value)),
+            () => { },
             SaveScope.Global);
     }
 
     private static IModSettingsValueBinding<bool> BoolBinding(
-        DraftConfig draft,
         string dataKey,
         Func<bool> read,
         Action<DraftConfig, bool> write)
@@ -187,36 +180,35 @@ internal static class RitsuLibSettingsPage
             ReplicaMod.ModId,
             dataKey,
             read,
-            value =>
-            {
-                Log.Info("[sts2-replica] settings write " + dataKey + "=" + value);
-                write(draft, value);
-                draft.IsDirty = true;
-                Persist(draft);
-            },
-            () => Persist(draft),
+            value => WriteLocal(dataKey, target => write(target, value)),
+            () => { },
             SaveScope.Global);
     }
 
     /// <summary>
-    /// 落盘。写入回调已经写过一次，RitsuLib 的 Save 回调只是第二道保障，所以按脏标记去重，
-    /// 保存失败时保留脏标记，下一次改动或保存会重试。
+    /// 每次改动都从「当前生效配置」拷一份候选、改一项、整份写回；写入走
+    /// <see cref="ReplicaRuntimeConfig.TryWriteLocal"/>，所以联机客户端既不改本机 JSON，也不改页面显示值。
     /// </summary>
-    private static void Persist(DraftConfig draft)
+    private static void WriteLocal(string dataKey, Action<DraftConfig> change)
     {
-        if (!draft.IsDirty)
+        Log.Info("[sts2-replica] settings write " + dataKey);
+        DraftConfig candidate = new DraftConfig(ReplicaRuntimeConfig.Effective);
+        change(candidate);
+        if (ReplicaRuntimeConfig.TryWriteLocal(candidate.ToConfig()))
         {
             return;
         }
-        if (ReplicaConfigStore.Save(draft.ToConfig()))
+        if (!ReplicaRuntimeConfig.IsMultiplayerClient || _loggedReadOnly)
         {
-            draft.IsDirty = false;
+            return;
         }
+        _loggedReadOnly = true;
+        Log.Info("[sts2-replica] settings page is read-only this run: a multiplayer client follows the host's config");
     }
 
     /// <summary>
-    /// 设置页的可变草稿：8 个可玩项可变，另外 4 个过滤开关从当前配置原样带过，
-    /// 保存时合成完整的 <see cref="ReplicaConfig"/>，不会丢键。
+    /// 设置页的候选配置：8 个可玩项可变，另外 4 个过滤开关从生效配置原样带过，
+    /// 写回时合成完整的 <see cref="ReplicaConfig"/>，不会丢键。
     /// </summary>
     private sealed class DraftConfig
     {
@@ -259,9 +251,6 @@ internal static class RitsuLibSettingsPage
         public bool IncludeQuest { get; }
 
         public bool Dedupe { get; }
-
-        /// <summary>是否有尚未成功写回磁盘的改动。</summary>
-        public bool IsDirty { get; set; }
 
         public ReplicaConfig ToConfig()
         {

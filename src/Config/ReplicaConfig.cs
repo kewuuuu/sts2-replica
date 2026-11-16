@@ -52,6 +52,29 @@ public sealed class ReplicaConfig
 	/// <summary>Sum of the configured rarity weights; 0 means "fall back to equal probability".</summary>
 	public int TotalWeight => WeightCommon + WeightUncommon + WeightRare + WeightColorless + WeightCurse;
 
+	/// <summary>
+	/// The values a peer may actually use. Only the network path needs this: a value read from a file
+	/// goes through <see cref="Parse"/>, but one that arrives as a message has bypassed it.
+	/// </summary>
+	public ReplicaConfig Normalized()
+	{
+		return new ReplicaConfig
+		{
+			ChargeRequired = Math.Max(1, ChargeRequired),
+			OfferCount = Math.Clamp(OfferCount, 1, OfferCountMax),
+			WeightCommon = Math.Clamp(WeightCommon, 0, MaxWeight),
+			WeightUncommon = Math.Clamp(WeightUncommon, 0, MaxWeight),
+			WeightRare = Math.Clamp(WeightRare, 0, MaxWeight),
+			WeightColorless = Math.Clamp(WeightColorless, 0, MaxWeight),
+			WeightCurse = Math.Clamp(WeightCurse, 0, MaxWeight),
+			StartWithRelic = StartWithRelic,
+			IncludeBasic = IncludeBasic,
+			IncludeStatus = IncludeStatus,
+			IncludeQuest = IncludeQuest,
+			Dedupe = Dedupe
+		};
+	}
+
 	public static ReplicaConfig Parse(string? json)
 	{
 		ReplicaConfig defaults = Default;

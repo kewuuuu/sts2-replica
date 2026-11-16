@@ -19,6 +19,7 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using Sts2Replica.Config;
 using Sts2Replica.Engine;
+using Sts2Replica.Net;
 
 namespace Sts2Replica.Models;
 
@@ -70,7 +71,20 @@ public sealed class GoodCardReplica : RelicModel
 		{
 			return false;
 		}
-		ReplicaConfig config = ReplicaConfigStore.Current;
+		// In a multiplayer run the host owns these numbers: judging the button from the local file would
+		// answer the same question differently on the two ends.
+		ReplicaConfig config = ReplicaRuntimeConfig.Effective;
+		try
+		{
+			// No-op once the host's config is in hand; a client's single ask can be dropped while the host
+			// has no handler yet (NetMessageBus.cs:88), and this is the first place the values are used.
+			ReplicaConfigSync.RequestConfigIfMissing();
+		}
+		catch (Exception exception)
+		{
+			// A broken sync must never cost the player a card reward.
+			Log.Error("[sts2-replica] config self-check failed: " + exception);
+		}
 		// Always inject exactly one option, and never let a local setting decide whether one exists:
 		// peers rebuild this list from their own config and sync only an index into it
 		// (CardReward.cs:256), so a missing entry turns a pick into a bad-index error on the other side.
@@ -96,7 +110,7 @@ public sealed class GoodCardReplica : RelicModel
 		Charges = 0;
 		try
 		{
-			ReplicaConfig config = ReplicaConfigStore.Current;
+			ReplicaConfig config = ReplicaRuntimeConfig.Effective;
 			Player owner = base.Owner;
 			Rng rng = new Rng(owner, base.Id, (ulong)owner.RunState.TotalFloor);
 			List<CardCreationResult> candidates = await ReplicaDeckSampler.BuildCandidatesAsync(owner, config, rng);

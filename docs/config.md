@@ -63,8 +63,9 @@
 - 写回内容是全部 12 个键，所以设置页没暴露的 4 个过滤开关（`include_basic` / `include_status` /
   `include_quest` / `dedupe`）按当前内存值原样保留，不会因为点了一次滑块被重置。
 - 多久生效：取样、权重、阈值、候选数都在**下一次判定**就生效（`GoodCardReplica` 在判定当下读
-  `ReplicaConfigStore.Current`）；`start_with_relic` 只在开局事件里读一次（`src/ReplicaMod.cs` 的
-  `OnRunStarted`），所以**下一次开局**生效。两者都**不需要重启游戏**。
+  `ReplicaRuntimeConfig.Effective`：单人局=本机文件，联机客户端=房主广播来的数值）；
+  `start_with_relic` 只在开局事件里读一次（`src/ReplicaMod.cs` 的 `OnRunStarted`），所以
+  **下一次开局**生效。两者都**不需要重启游戏**。
 - 没有 RitsuLib 时这一页不会出现，模组照常编译、照常运行，只认 JSON 文件（构建开关见 README）。
 - 写入失败（目录不可写等）只在日志里留一条 `[sts2-replica] could not write config at ...`，
   改动仍留在内存里，本次游戏内照样生效。

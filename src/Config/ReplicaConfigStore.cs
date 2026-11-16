@@ -32,9 +32,10 @@ public static class ReplicaConfigStore
 				Log.Info("[sts2-replica] config loaded from " + path);
 				if (Serialize(_current) != Serialize(ReplicaConfig.Default))
 				{
-					// The reward screen syncs an index into a list every peer rebuilds from its own file, so a
-					// mismatched config desyncs the run instead of being rejected by the handshake.
-					Log.Warn("[sts2-replica] non-default config is active; a multiplayer run needs every player to use the same sts2-replica.json");
+					// The reward screen syncs an index into a list every peer rebuilds, so the numbers have to
+					// agree: a multiplayer client takes them from the host (ReplicaConfigSync) and ignores this
+					// file until the run ends, while a singleplayer run uses them as they are.
+					Log.Warn("[sts2-replica] non-default config is active; a multiplayer run uses the host's values, so a client's own values apply to singleplayer only");
 				}
 				return _current;
 			}

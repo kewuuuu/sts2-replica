@@ -14,6 +14,7 @@ using Sts2Replica.Art;
 using Sts2Replica.Config;
 using Sts2Replica.Localization;
 using Sts2Replica.Models;
+using Sts2Replica.Net;
 
 namespace Sts2Replica;
 
@@ -36,6 +37,7 @@ public static class ReplicaMod
             + "charge_required=" + config.ChargeRequired
             + ", offer_count=" + config.OfferCount
             + ", start_with_relic=" + config.StartWithRelic);
+        Log.Info("[sts2-replica] local config fingerprint " + ReplicaRuntimeConfig.Fingerprint(config));
     }
 
     /// <summary>A DLL-only mod owns its Harmony instance: ModManager only auto-patches assemblies without an initializer.</summary>
@@ -54,12 +56,40 @@ public static class ReplicaMod
     }
 
     /// <summary>
-    /// Every client derives the same starting state from the run seed, so each player in a
-    /// multiplayer run is granted the relic locally (same shape as CursedRun.AfterActEntered).
+    /// Hooked to RunStarted, which also fires when a save is loaded (RunManager.cs:788, NGame.cs:1182).
+    /// The config exchange therefore runs on every start, including a client that joins or reloads.
     /// </summary>
     private static void OnRunStarted(RunState state)
     {
-        if (!ReplicaConfigStore.Current.StartWithRelic)
+        try
+        {
+            ReplicaRuntimeConfig.ClearOverride();
+            ReplicaConfigSync.AttachForRun(state);
+        }
+        catch (Exception exception)
+        {
+            Log.Error("[sts2-replica] config sync failed at run start: " + exception);
+        }
+        if (ReplicaRuntimeConfig.IsMultiplayerClient)
+        {
+            // The host's start_with_relic arrives one round trip later, and granting from the local file
+            // here would leave the two ends with different relic sets. OnHostConfigAdopted grants instead.
+            return;
+        }
+        if (!ReplicaRuntimeConfig.Effective.StartWithRelic)
+        {
+            return;
+        }
+        TaskHelper.RunSafely(GrantStartingRelics(state));
+    }
+
+    /// <summary>
+    /// Called once a client has adopted the host's values. RelicCmd.Obtain sends nothing (RelicCmd.cs:35-55),
+    /// so granting later than the host still ends in the same relic set on both ends.
+    /// </summary>
+    internal static void OnHostConfigAdopted(RunState state)
+    {
+        if (!ReplicaRuntimeConfig.Effective.StartWithRelic)
         {
             return;
         }

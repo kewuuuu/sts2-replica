@@ -65,7 +65,8 @@
 
 装了 [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) 时，RitsuLib 的设置界面里会多出
 「好牌多抓」一页，8 个常用项（充能阈值、候选数、五档权重、开局自带）可以直接改；改完立即写回上面那份 JSON，
-**不需要重启游戏**（只有 `start_with_relic` 要等下一次开局）。没装 RitsuLib 就只有 JSON 文件，模组照常编译运行。
+**不需要重启游戏**（只有 `start_with_relic` 要等下一次开局）。联机客户端里这一页是**只读**的：显示房主的数值，
+改动不落盘。没装 RitsuLib 就只有 JSON 文件，模组照常编译运行。
 
 构建开关：默认按本机路径引用 RitsuLib（可用 `-p:RitsuLibDir=...` 覆盖、`-p:RitsuLibReferenceTarget=...` 指定
 compat 版本）；`dotnet build sts2-replica.csproj -c Release -p:EnableRitsuLib=false` 产出完全不引用 RitsuLib、
@@ -78,6 +79,11 @@ compat 版本）；`dotnet build sts2-replica.csproj -c Release -p:EnableRitsuLi
 
 ## 多人
 
+- **配置以房主为准**：房主开局广播一次模组参数，客户端只在内存里采纳，**不改写**客户端本机的
+  `sts2-replica.json`；客户端的设置页显示房主的数值且只读。充能（`Charges`）是玩家个人的，不同步。
+  两端各打一行配置指纹（`host: broadcast config …` / `adopting host config …`），可直接对账；机制见
+  [`docs/release.md`](docs/release.md) 的「配置同步」。
+- 所有玩家装**同一版本、同一份模组清单**（握手只比 `id-version`，且消息 id 按类型名排序、只占一字节）。
 - 取样候选与升级判定都用从 run 状态派生的 `Rng`（`new Rng(player, relic.Id, (ulong)RunState.TotalFloor)`），各端产生同一批候选。
 - 选择哪一张由 `CardSelectCmd.FromSimpleGridForRewards` 内部的选择同步负责。
 - 拿卡只调 `CardPileCmd.Add`，与原版卡牌奖励完全同路径；**不**调用 `RewardSynchronizer.SyncLocalObtainedCard`
