@@ -29,6 +29,9 @@ dist/sts2-replica-0.1.0-beta.zip
 - 配置读取与默认值生效；`GoodCardReplica` 进入共享遗物池排队；
 - 装 RitsuLib 0.6.13 时设置页注册成功（`RitsuLib settings page registered: mod_id=sts2-replica, page_id=replica-settings`）；
 - 无异常/无 `[ERROR]` 指向本模组；JSON-only 构建同样正常初始化。
+- `0.1.0-beta` 能通过 `SemanticVersion` 解析：完整日志里**没有** `declares version ... which is not a valid
+  Semantic Version` 警告。游戏内模组列表那一行显示的是 `(0.1.0)`（推测该列表只拼 Major.Minor.Patch；
+  `SemanticVersion.ToString()` 本身会保留 `-beta`，见 `MegaCrit.Sts2.Core.Debug/SemanticVersion.cs:243-255`），属显示差异，不影响加载。
 
 **未实机验证**（首次上手请注意）：
 
