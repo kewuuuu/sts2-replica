@@ -23,13 +23,16 @@ dist/sts2-replica-0.1.0-beta.zip
 
 ## 验证状态（照实写）
 
-已实机验证（v0.113.1，无头启动，日志为证）：
+已实机验证：
 
+- **遗物图标**（0.1.0-beta → 0.2.0-beta 期间修复）：用户实机开局确认遗物格不再显示 `NOPE` 占位图。根因是
+  `RelicModel.Icon` 等 getter 上的补丁会被同类补丁（RitsuLib 的框架资源包）覆盖，改为在 `NRelic.Reload`
+  之后直接写 `TextureRect.Texture`（见下节「排障：遗物图标」）。
 - manifest 被识别、dll 被加载、`[ModInitializer]` 被调用；
 - 配置读取与默认值生效；`GoodCardReplica` 进入共享遗物池排队；
 - 装 RitsuLib 0.6.13 时设置页注册成功（`RitsuLib settings page registered: mod_id=sts2-replica, page_id=replica-settings`）；
 - 无异常/无 `[ERROR]` 指向本模组；JSON-only 构建同样正常初始化。
-- `0.1.0-beta` 能通过 `SemanticVersion` 解析：完整日志里**没有** `declares version ... which is not a valid
+- `0.1.0-beta` 与 `0.2.0-beta` 都能通过 `SemanticVersion` 解析：完整日志里**没有** `declares version ... which is not a valid
   Semantic Version` 警告。游戏内模组列表那一行显示的是 `(0.1.0)`（推测该列表只拼 Major.Minor.Patch；
   `SemanticVersion.ToString()` 本身会保留 `-beta`，见 `MegaCrit.Sts2.Core.Debug/SemanticVersion.cs:243-255`），属显示差异，不影响加载。
 
@@ -37,9 +40,12 @@ dist/sts2-replica-0.1.0-beta.zip
 
 - 卡牌奖励界面里【制模】/【取样】按钮的实际显示与点击流程；
 - 取样网格的候选项、取消是否退还充能；
-- 遗物图标（小图标/描边/大图）的实际观感；
+- 遗物图标的大图（`BigIcon`，图鉴/查看屏）观感——小图标与描边已实机确认；
 - 双端联机实测（源码级评审已完成，见下节「多人联机」；双开验证未做）。本轮新增的配置同步同样只有源码级结论：
   消息是否真的到达对端、中途加入/读档是否真的重放，都要双开才能确认。
+
+> 排查日志提示：`godot.log` **每次启动都轮转**——旧内容会被改名成同目录的 `godot<时间戳>.log`，
+> 新进程从头写 `godot.log`。所以「上次启动还在这儿、这次没了」是正常的，不是模组失灵。
 
 ## 已知问题
 
