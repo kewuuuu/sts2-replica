@@ -47,6 +47,23 @@ dist/sts2-replica-0.1.0-beta.zip
   写回调现在会记 `[sts2-replica] settings write <key>=<value>`，下次出现时按该行定位；文件本身只影响本机玩法，不写坏存档。
 - 手改 JSON 时非法值一律回落到默认并在日志留痕（`ReplicaConfig.Parse`），不会抛异常中断启动。
 
+## 排障：遗物图标
+
+遗物小图标 / 描边 / 大图分别由 `RelicModel.Icon`、`IconOutline`、`BigIcon` 三个 getter 提供，
+本模组用 Harmony postfix 把它们换成 dll 内嵌的三张 PNG（`src/Art/`）。看日志定位：
+
+| 日志行 | 含义 |
+| --- | --- |
+| `patches applied; relic art hooks Icon=1 IconOutline=1 BigIcon=1` | 三个 getter 的补丁都挂上了（启动时就该有这一行） |
+| `relic art loaded (GOOD_CARD_REPLICA/icon) 128x128` 等三行 | 贴图首次被读取，解码成功（每进程一次） |
+| `relic art unavailable (<key>), keeping the vanilla icon` | 内嵌 PNG 缺失或解码失败，回落到原版占位图 |
+
+一行都没有 ⇒ 游戏里装的是旧 dll（美术补丁加入之前）。把 `dist\sts2-replica.zip` 解压覆盖后**重启游戏**。
+
+另有一类"看起来像缺图"的**正常**行为：图鉴里**未获得/未发现**的遗物，原版就会用
+`packed/common_ui/locked_model.png` 占位（`NInspectRelicScreen.cs:386-390`、`NRelicCollectionEntry.cs:132-137`），
+与补丁无关；进一局拿到该遗物后即恢复。
+
 ## 多人联机
 
 源码级评审（v0.113.1 反编译核对）结论：本模组**不自造任何网络消息**，全部行为靠「各端同构执行 + 索引同步」，

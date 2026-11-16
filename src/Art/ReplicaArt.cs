@@ -66,6 +66,8 @@ internal static class ReplicaArt
 				return null;
 			}
 			Cache[key] = texture;
+			Log.Info("[sts2-replica] relic art loaded (" + key + ") "
+				+ texture.GetWidth() + "x" + texture.GetHeight());
 			return texture;
 		}
 		catch (Exception exception)
@@ -126,6 +128,23 @@ internal static class ReplicaArt
 			}
 		}
 		return null;
+	}
+
+	/// <summary>One line at startup: how many postfixes each of the three getters carries, so a log says whether the hooks landed.</summary>
+	internal static string DescribeHooks()
+	{
+		return "Icon=" + CountPostfixes(typeof(RelicModel).GetProperty(nameof(RelicModel.Icon))!.GetGetMethod())
+			+ " IconOutline=" + CountPostfixes(typeof(RelicModel).GetProperty(nameof(RelicModel.IconOutline))!.GetGetMethod())
+			+ " BigIcon=" + CountPostfixes(typeof(RelicModel).GetProperty(nameof(RelicModel.BigIcon))!.GetGetMethod());
+	}
+
+	private static int CountPostfixes(System.Reflection.MethodInfo? getter)
+	{
+		if (getter == null)
+		{
+			return -1;
+		}
+		return HarmonyLib.Harmony.GetPatchInfo(getter)?.Postfixes.Count ?? 0;
 	}
 
 	private static void Report(string key, Exception? exception)

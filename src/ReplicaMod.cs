@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.RelicPools;
 using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Runs;
+using Sts2Replica.Art;
 using Sts2Replica.Config;
 using Sts2Replica.Localization;
 using Sts2Replica.Models;
@@ -43,6 +44,8 @@ public static class ReplicaMod
         try
         {
             new Harmony(ModId).PatchAll(Assembly.GetExecutingAssembly());
+            Log.Info("[sts2-replica] patches applied; relic art hooks "
+                + ReplicaArt.DescribeHooks());
         }
         catch (Exception exception)
         {
