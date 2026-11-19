@@ -1,51 +1,88 @@
 [h1]好牌多抓 / Good Card Replica[/h1]
 [i]适用游戏版本：Slay the Spire 2 v0.113.1 · 模组版本 0.3.1-beta[/i]
 
-[b]这是什么[/b]
-新增一个共享遗物「好牌多抓」：把「拿一张不想要的卡」变成「攒着换一张卡组里已有的卡」。
+好牌多抓！烂牌我抓来干嘛？真是不东尼意思啊，我九死一生打个小怪却只能点跳过。这不公平！现在你可以选择献祭几次卡牌奖励来获取一张卡组中已有的牌。
 
-[b]怎么玩[/b]
+[hr][/hr]
+[h2]功能[/h2]
+
+新增一个遗物「好牌多抓」：
+
+[quote][i]卡牌奖励中可以选择【制模】：放弃本次奖励，为此遗物充能 1 点（3 点充满）。充满后改为【取样】：从牌组中按稀有度加权抽选 2 张候选，自选一张加入牌组，随后清空充能。[/i][/quote]
+
+[i]（以上是游戏内遗物描述原文，其中 3 与 2 跟随本局设置，改设置后下一局自动更新。）[/i]
+
+取样拿到的[b]不是"复制品"[/b]：它是一张新卡牌（起点没有升级、没有附魔），但走的是正常卡牌奖励流程 —— 所以照样会走升级判定（蛋类遗物等照常生效），照样能被遗物改成附魔卡。抽到哪张只决定「是哪张牌」，不决定「它长成什么样」。
+
+初始默认权重：白卡 [b]6[/b] · 蓝卡 [b]4[/b] · 金卡 [b]2[/b] · 无色 [b]1[/b] · 诅咒 [b]3[/b]；基础牌按白卡算。
+
+[h2]设置（可选）[/h2]
+
+装了 RitsuLib 就在游戏里的模组设置页直接修改；
+没装就改 [code]mods/config/sts2-replica.cfg[/code]（JSON，非法值自动回落默认）。
+
+[table]
+[tr][th]项[/th][th]默认[/th][th]说明[/th][/tr]
+[tr][td]charge_required[/td][td]3[/td][td]攒满几次充能可以取样（也就是要放弃几次卡牌奖励）[/td][/tr]
+[tr][td]offer_count[/td][td]2[/td][td]取样时给几张候选[/td][/tr]
+[tr][td]weight_common / uncommon / rare[/td][td]6 / 4 / 2[/td][td]白/蓝/金卡的抽取权重[/td][/tr]
+[tr][td]weight_colorless / curse[/td][td]1 / 3[/td][td]无色卡、诅咒的抽取权重[/td][/tr]
+[tr][td]start_with_relic[/td][td]false[/td][td]开局直接带上这个遗物[/td][/tr]
+[tr][td]include_basic / status / quest[/td][td]true / false / false[/td][td]候选是否包含基础牌、状态牌、任务牌[/td][/tr]
+[tr][td]dedupe[/td][td]true[/td][td]牌组里同名卡只算一个候选[/td][/tr]
+[/table]
+
+[hr][/hr]
+[h2]兼容与说明[/h2]
+
 [list]
-[*][b]制模[/b]：卡牌奖励界面多出一个【制模】按钮。点它放弃本次卡牌奖励，遗物 +1 层充能。
-[*]充能不满（默认 3 层）时只有【制模】；攒满后同一个按钮变成【取样】。
-[*][b]取样[/b]：清空充能，给出 2 张候选（默认），候选取自你卡组里已有卡的同类新卡，选 1 张加入卡组。
+[*]适用游戏版本 [b]v0.113.1[/b]。游戏更新后若本模组报错，请在本页回帖。
+[*]同时持有原版【献祭】类遗物或【漂流木】时，本模组的按钮会[b]主动让位[/b]——原版卡牌奖励最多只允许两个额外选项，让位是为了不把原版界面搞崩。
+[*][b]联机[/b]：所有人用同一个模组版本；模组参数[b]以房主为准[/b]，并在开局时冻结（局内改设置只影响下一局）。客户端本地的配置文件不会被覆盖，只是这一局用房主的数值。
+[*]同一楼层重复取样会得到同一组候选（种子包含楼层数）。
 [/list]
 
-[b]取样的规则（重要）[/b]
+[hr][/hr]
+[h1]English[/h1]
+
+[b]Good Card Replica[/b] — spend a few card rewards you would have skipped, then pick a card you already own.
+
+[h2]Features[/h2]
+
+This mod adds one shared relic, Good Card Replica:
+
+[quote][i]On a card reward screen you may choose [b]Mold[/b]: give up this reward and add 1 charge to this relic (3 charges fill it). Once it is full the choice becomes [b]Sample[/b]: draw 2 rarity-weighted candidates from your deck, pick 1 to add to your deck, and the relic is emptied.[/i][/quote]
+
+[i](That is the relic's own in-game description; the numbers 3 and 2 follow the run's settings and update on the next run.)[/i]
+
+What you get is [b]not a copy[/b]: it is a brand new card (no upgrade, no enchantment to start with) that goes through the ordinary card reward pipeline — so it still rolls its upgrade chance (egg relics and the like apply as usual) and other relics can still turn it into an enchanted card. The candidate only decides which card it is, not what it becomes.
+
+Default weights: common [b]6[/b] · uncommon [b]4[/b] · rare [b]2[/b] · colorless [b]1[/b] · curse [b]3[/b]; basic cards count as common.
+
+[h2]Settings (optional)[/h2]
+
+With RitsuLib installed, edit them on the in-game mod settings page; otherwise edit [code]mods/config/sts2-replica.cfg[/code] (JSON, invalid values fall back to defaults).
+
+[table]
+[tr][th]Option[/th][th]Default[/th][th]Meaning[/th][/tr]
+[tr][td]charge_required[/td][td]3[/td][td]how many charges (i.e. sacrificed card rewards) are needed before you may sample[/td][/tr]
+[tr][td]offer_count[/td][td]2[/td][td]how many candidates a sample offers[/td][/tr]
+[tr][td]weight_common / uncommon / rare[/td][td]6 / 4 / 2[/td][td]draw weight of common / uncommon / rare cards[/td][/tr]
+[tr][td]weight_colorless / curse[/td][td]1 / 3[/td][td]draw weight of colorless cards and curses[/td][/tr]
+[tr][td]start_with_relic[/td][td]false[/td][td]start every run holding the relic[/td][/tr]
+[tr][td]include_basic / status / quest[/td][td]true / false / false[/td][td]whether basic, status and quest cards may be candidates[/td][/tr]
+[tr][td]dedupe[/td][td]true[/td][td]only one candidate per distinct card in your deck[/td][/tr]
+[/table]
+
+[h2]Compatibility & Notes[/h2]
+
 [list]
-[*]候选不是「复制品」：每张候选都是新生成的同名卡，起点没有升级、没有附魔。
-[*]但它走正常的卡牌奖励流程：本次奖励的升级判定、蛋类与其它遗物对卡牌奖励的改造照常作用在它身上。
-[*]候选按稀有度加权抽取（权重可在设置里改）：白 6 / 蓝 4 / 金 2 / 无色 1 / 诅咒 3。
-[*]卡组里的同名卡按去重计数（可关），可选是否包含基础牌、状态牌、任务牌。
+[*]Built for game version [b]v0.113.1[/b]. If the mod throws after a game update, please reply on this page.
+[*]If you also hold the vanilla sacrifice relic or Driftwood, this mod's button [b]steps aside[/b] — a vanilla card reward allows at most two extra options, and stepping aside keeps the vanilla UI intact.
+[*][b]Multiplayer[/b]: everyone must run the same mod version; settings [b]follow the host[/b] and freeze when the run starts (changing them mid-run only affects the next run). Your local config file is not overwritten — only this run uses the host's values.
+[*]Sampling twice on the same floor gives the same candidate set (the seed includes the floor number).
 [/list]
 
-[b]设置[/b]
-[list]
-[*]配置文件：mods/config/sts2-replica.cfg（内容是 JSON）
-[*]装了 RitsuLib 的话，游戏设置里会出现本模组的一页设置界面（拖动即保存，改动从下一局开始生效）
-[*]参数在开局时冻结：局内改设置只影响之后创建的对局
-[*]可调：充能层数、候选张数、五档稀有度权重、开局是否自带遗物、各类过滤开关
-[/list]
-
-[b]多人[/b]
-[list]
-[*]充能是每个玩家自己的；模组参数以房主为准
-[*]两端需装同一版本、使用同一份参数（客户端只发请求，不会改动本机文件）
-[*]玩家持有 PaelsWing 时本模组的按钮会让位，避免撞上原版「最多 2 个奖励选项」的上限
-[/list]
-
-[b]安装[/b]
-[list]
-[*]在 Steam 订阅本物品即可，游戏启动时自动加载到 mods 里
-[*]模组 id：sts2-replica；没有强制前置（RitsuLib 只是可选的设置界面增强）
-[/list]
-
-[b]已知限制[/b]
-[list]
-[*]beta 阶段：双端联机的「中途加入」与「读档重放」尚未实机覆盖
-[*]同一楼层重复取样会抽到同一组候选（随机种子含楼层号）
-[*]图鉴里的大图没有描边，遗物小图标有（这是原版的分层方式）
-[/list]
-
-[b]English summary[/b]
-Adds a shared relic that turns a skipped card reward into a charge, and lets you spend full charges to sample (default 2) same-name cards already in your deck, weighted by rarity. Values are frozen at run start; in co-op the host's values win. Requires Slay the Spire 2 v0.113.1.
+[hr][/hr]
+如果喜欢这个作品，欢迎支持爱发电 / If you enjoy this mod, you can support me here:
+[url=https://ifdian.net/a/60KEWU09]https://ifdian.net/a/60KEWU09[/url]
