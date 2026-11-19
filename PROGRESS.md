@@ -114,4 +114,6 @@
 - 验收（我本机）：`dotnet build -c Release` 0 警告 0 错误，dll 66560 B，与 `mods/sts2-replica/` 副本逐字节一致；dll 内 UTF-16 字面量含 `{Charges} 点充满`、`{Options} 张候选`；无头启动 exit=0，`patches applied` 正常、`patch failed` 计数 0、模组行显示 `(0.3.1-beta)`；全日志唯一 `[ERROR]` 属工坊模组 MultiplayerModSync（缺 dll），与本模组无关。
 - 未实测：悬停/图鉴里的实际渲染（headless 不渲染 UI；需用户开一局看描述）。
 - 发布：`dist/sts2-replica-0.3.1-beta.zip`；创意工坊条目 3840979834 用 `--update` 复用分支更新成功（首次实测该分支，输出见 `docs/workshop.md` §2）。
+- 发布后发现：页面上正文第二行仍写「模组版本 0.3.0-beta」——那行是 `workshop/description.bbcode:2` 手写的，工具不校验内容。修法是一条护栏而不是再改一次数字：`tools/WorkshopUploader/Program.cs` 新增 `CheckVersionMentions`（从 `<content>/<id>/<id>.json` 读 `version`，正则扫描述里的「模组版本 / mod version」，不一致 `BAD` 并 exit 1），已用故意写旧版本的描述文件验证会拦（`BAD description says mod version 0.3.0-beta but the manifest says 0.3.1-beta`，exit 1）；改动描述版本号后重跑 `--update`，页面正文已更新。
+- 同轮：把 `--update` 实测输出、版本号三处同升、限流 `HTTP 429` 的处理写进 skill `sts2-workshop-publish`。
 

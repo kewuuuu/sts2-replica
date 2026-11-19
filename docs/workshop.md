@@ -11,7 +11,7 @@
 | 当前版本 | 0.3.1-beta |
 | 可见性 | public |
 | 首次发布 | 2026-11-17，内容 4 files / 76365 B（`--create`） |
-| 最近一次更新 | 2026-11-19，内容 4 files / 76877 B（`--update 3840979834`，实测通过） |
+| 最近一次更新 | 2026-11-19，内容 4 files / 76877 B（`--update 3840979834` 实测通过；同日二次更新，修正正文里的版本号） |
 
 条目 id 同时写在 `dist/workshop-item-id.txt`（`dist/` 不入库，所以以本表为准）。
 
@@ -120,3 +120,9 @@ WorkshopUploader.exe --update <id> --branch-min default --branch-max default
 - `Callback<CreateItemResult_t>`：`CreateItemResult_t` / `SubmitItemUpdateResult_t` 只作为 call result 存在，永远不会有广播回调。
 
 旁证：把游戏 headless 跑起来后再跑 `--probe`，结果完全一样 ⇒ 失败与"是否由 Steam 启动"无关。反编译留档在 `D:/engine/DSH/Workspace/_cache/swdecomp/`（`SteamAPI.cs`、`CallbackDispatcher.cs`、`CallResult.cs`）。
+
+### 版本号对不上（2026-11-19 踩到）
+
+`workshop/description.bbcode:2` 手写的「模组版本 X.Y.Z」不在构建产物里，上传工具不会替你改：0.3.1-beta 传上去后，页面上正文第二行仍写着 0.3.0-beta。现在 `tools/WorkshopUploader/Program.cs` 的 `CheckVersionMentions` 会从 `<content>/sts2-replica/sts2-replica.json` 读 `version`，用正则扫描述里的「模组版本 / mod version」，不一致就报 `BAD description says mod version 0.3.0-beta but the manifest says 0.3.1-beta` 并 exit 1（用故意写旧版本的描述文件验证过确实会拦）。
+
+Steam 侧限流：短时间内反复打开条目页或 `curl`，会拿到标题为「Steam 社区 :: 错误」的页面或 `HTTP 429`，与条目状态无关，隔几分钟再看。

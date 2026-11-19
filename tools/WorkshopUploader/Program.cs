@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using Steamworks;
 
@@ -139,6 +140,7 @@ internal static class Program
             CheckDescription(description, report);
             CheckPreview(options.Preview, report);
             CheckContent(options.Content, report);
+            CheckVersionMentions(options.Content, description, report);
             CheckBranchVersions(options, report);
 
             foreach (string problem in report.Problems)
@@ -535,6 +537,56 @@ internal static class Program
         catch (JsonException ex)
         {
             report.Bad($"content {ModId}/{ModId}.json is not valid JSON: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// The page spells the mod version out by hand, so it keeps advertising the old one after a bump
+    /// (0.3.1-beta shipped while the page still said 0.3.0-beta). Catch it here instead of on the page.
+    /// Only the mod version is checked: the game version sits in prose ("Slay the Spire 2 v0.113.1")
+    /// where a token-based comparison would guess wrong.
+    /// </summary>
+    private static void CheckVersionMentions(string contentDir, string? description, Reporter report)
+    {
+        if (description is null)
+        {
+            return;
+        }
+
+        string manifest = Path.Combine(contentDir, ModId, ModId + ".json");
+        if (!File.Exists(manifest))
+        {
+            return;
+        }
+
+        string? version;
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(manifest, Encoding.UTF8));
+            version = document.RootElement.TryGetProperty("version", out JsonElement value) && value.ValueKind == JsonValueKind.String
+                ? value.GetString()
+                : null;
+        }
+        catch (JsonException)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            report.Bad("manifest has no \"version\"");
+            return;
+        }
+
+        MatchCollection mentions = Regex.Matches(description, @"(?:模组版本|mod version)\s*[:：]?\s*(v?\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?)", RegexOptions.IgnoreCase);
+        foreach (Match mention in mentions)
+        {
+            string mentioned = mention.Groups[1].Value;
+            if (mentioned.TrimStart('v') != version)
+            {
+                report.Bad($"description says mod version {mentioned} but the manifest says {version}");
+                return;
+            }
         }
     }
 
