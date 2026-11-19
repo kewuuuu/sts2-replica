@@ -105,3 +105,13 @@
 - 发布后核验：`dist/workshop-item-id.txt` = 3840979834；用浏览器打开条目页确认公开可见（标题/预览图/描述/大小 76.365 KB 均正常）。
 - 未验证：`--update` 走「复用同一 item」的分支（`SubmitItemUpdate` 已在 `--create` 内跑通，但复用分支没跑）；条目截图仍缺（`docs/workshop.md` 列了建议的 5 张）。
 
+
+## 2026-11-19 描述数据显示本局数值（v0.3.1-beta）
+
+- 需求（m01423）：把设置里的数值写进遗物描述——制模几次可取样、取样几选几。
+- 机制（反编译证据）：提示框走 `RelicModel.HoverTip` → `DynamicDescription`（`RelicModel.cs:93-111`、`:358-377`），图鉴走 `NInspectRelicScreen.cs:408` 同一个属性；正文支持 SmartFormat 占位符（`LocString.cs:85-94`），`LocString.AddObj` 对同名键是覆盖（`:161-169`）。`Description` 是私有（`:69`）、`DynamicVars` 不可覆写（`:291-303`）、`DynamicVarSet` 首次构建即固化（`Clone` 于 `:547`）。
+- 实现：`src/Localization/ReplicaLoc.cs:55` 描述改为带 `{Charges}`/`{Options}` 的模板；`GoodCardReplica.CanonicalVars` 提供兜底值（patch 失效时不显示裸花括号）；新增 `src/Models/RelicDescriptionPatch.cs`（Harmony postfix on `RelicModel.DynamicDescription` getter，遇本遗物就用 `ReplicaRuntimeConfig.ForThisRun` 覆盖两个变量），因此数字跟"本局冻结的那份设置"一致，改设置下一局即变。
+- 验收（我本机）：`dotnet build -c Release` 0 警告 0 错误，dll 66560 B，与 `mods/sts2-replica/` 副本逐字节一致；dll 内 UTF-16 字面量含 `{Charges} 点充满`、`{Options} 张候选`；无头启动 exit=0，`patches applied` 正常、`patch failed` 计数 0、模组行显示 `(0.3.1-beta)`；全日志唯一 `[ERROR]` 属工坊模组 MultiplayerModSync（缺 dll），与本模组无关。
+- 未实测：悬停/图鉴里的实际渲染（headless 不渲染 UI；需用户开一局看描述）。
+- 发布：`dist/sts2-replica-0.3.1-beta.zip`；创意工坊条目 3840979834 用 `--update` 复用分支更新成功（首次实测该分支，输出见 `docs/workshop.md` §2）。
+

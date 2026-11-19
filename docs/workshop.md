@@ -8,9 +8,10 @@
 |---|---|
 | item id | **3840979834** |
 | URL | https://steamcommunity.com/sharedfiles/filedetails/?id=3840979834 |
-| 当前版本 | 0.3.0-beta |
+| 当前版本 | 0.3.1-beta |
 | 可见性 | public |
-| 首次发布 | 2026-11-17，内容 4 files / 76365 B |
+| 首次发布 | 2026-11-17，内容 4 files / 76365 B（`--create`） |
+| 最近一次更新 | 2026-11-19，内容 4 files / 76877 B（`--update 3840979834`，实测通过） |
 
 条目 id 同时写在 `dist/workshop-item-id.txt`（`dist/` 不入库，所以以本表为准）。
 
@@ -46,6 +47,19 @@ tools/WorkshopUploader/bin/Release/net9.0/WorkshopUploader.exe --create
 # 4) 之后每次更新（<id> 取自 item-id.txt，或工坊页面 URL）
 tools/WorkshopUploader/bin/Release/net9.0/WorkshopUploader.exe --update <id>
 ```
+
+`--update` 的实测输出（与 `--create` 相比没有 `needsLegalAgreement` 那一行，也不写 item-id）：
+
+```
+[workshop] mode update
+[workshop] StartItemUpdate handle=<ulong> id=3840979834
+[workshop] SubmitItemUpdate call=<ulong> changelog=<改动的第一行>
+[workshop] upload 0% (preparing config) / 100% (uploading content) / 0% (uploading preview)
+[workshop] EResult k_EResultOK
+[workshop] published 3840979834 as public
+```
+
+进度百分比会来回跳（content 到 100% 后 preview 又从 0% 起），属正常；只要最后一行是 `published … as public` 就是成功。
 
 工具做得很少但很直白：`SteamAPI.Init()` 后走 `SteamUGC.CreateItem` / `StartItemUpdate` / `SubmitItemUpdate`，全程打印百分比。它要求 Steam 客户端已登录、且该账号拥有游戏；工作目录里的 `steam_appid.txt`（内容 2868840）与 `steam_api64.dll` 由构建自动放好。
 

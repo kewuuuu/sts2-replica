@@ -52,7 +52,10 @@ public static class ReplicaLoc
 	{
 		List<KeyValuePair<string, string>> entries = new List<KeyValuePair<string, string>>();
 		Add(entries, "title", "好牌多抓");
-		Add(entries, "description", "卡牌奖励中可以放弃本次奖励，为此遗物充能 1 点。充能满后，改为从牌组中按稀有度抽选候选牌，自选一张加入牌组。");
+		// {Charges} / {Options} are SmartFormat placeholders: LocString.GetFormattedText runs
+		// LocManager.SmartFormat (LocString.cs:85-94), and RelicDescriptionPatch refreshes both variables
+		// from ReplicaRuntimeConfig.ForThisRun on every read.
+		Add(entries, "description", "卡牌奖励中可以选择【制模】：放弃本次奖励，为此遗物充能 1 点（{Charges} 点充满）。充满后改为【取样】：从牌组中按稀有度加权抽选 {Options} 张候选，自选一张加入牌组，随后清空充能。");
 		Add(entries, "flavor", "牌桌上的好牌，总是值得多抓一张。");
 		Add(entries, "selectionScreenPrompt", "选择一张牌加入牌组");
 		return entries;

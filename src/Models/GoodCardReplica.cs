@@ -11,6 +11,7 @@ using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Entities.Rewards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
@@ -36,6 +37,17 @@ public sealed class GoodCardReplica : RelicModel
 	public override bool ShouldReceiveCombatHooks => false;
 
 	public override bool ShowCounter => true;
+
+	/// <summary>
+	/// Fallback values for the description placeholders, so a failed RelicDescriptionPatch shows numbers
+	/// instead of literal braces. These are built once (RelicModel.cs:291-305) - RelicDescriptionPatch is
+	/// what keeps the text in step with the run's frozen settings.
+	/// </summary>
+	protected override IEnumerable<DynamicVar> CanonicalVars => new DynamicVar[]
+	{
+		new DynamicVar("Charges", ReplicaRuntimeConfig.Effective.ChargeRequired),
+		new DynamicVar("Options", ReplicaRuntimeConfig.Effective.OfferCount)
+	};
 
 	public override int DisplayAmount => _charges;
 
