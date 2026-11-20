@@ -17,8 +17,8 @@ internal static class RitsuLibSettingsPage
     private const string SettingsAssemblyName = "STS2-RitsuLib.Settings";
     private const string PageId = "replica-settings";
 
-    /// <summary>充能阈值滑块的范围。键本身只钳制下限（<c>Math.Max(1, ...)</c>），上限是设置页的取值区间。</summary>
-    private const int ChargeRequiredMin = 1;
+    /// <summary>充能阈值滑块的范围。键本身只钳制下限（<c>Math.Max(0, ...)</c>）；0 表示每次卡牌奖励都能直接取样。上限是设置页的取值区间。</summary>
+    private const int ChargeRequiredMin = 0;
     private const int ChargeRequiredMax = 20;
 
     /// <summary>五档权重滑块的上限。默认值最大为 6，100 已足够拉开差距，也避免滑块步数过多。</summary>

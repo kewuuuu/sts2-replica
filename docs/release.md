@@ -1,4 +1,14 @@
-# 发布（0.3.0-beta）
+# 发布（最新 0.4.0-beta）
+
+## 0.4.0-beta 变更（相对 0.3.1-beta）
+
+1. **充能阈值最低可设为 0**：`charge_required` 的解析下限由 1 改为 0（`src/Config/ReplicaConfig.cs` 的 `Parse` 与 `Normalized`），
+   设置页滑块区间同步改成 0..20（`src/Integration/RitsuLibSettingsPage.cs` 的 `ChargeRequiredMin`）。
+   设成 0 时 `Charges >= 0` 恒成立，只要卡组里有可取样卡就直接注入【取样】，不再出现【制模】。
+2. **0 档隐藏充能计数**：`GoodCardReplica.ShowCounter` 改为 `ForThisRun.ChargeRequired > 0`，免充能模式下不再显示一个永远为 0 的角标。
+3. 遗物描述补一句「设为 0 时每次奖励都能直接取样」（`src/Localization/ReplicaLoc.cs`），工坊正文的键位表与英文段同步。
+
+不变的部分：按钮注入仍是"恰好一个"，联机仍以房主配置为准并在开局冻结；`Charges` 仍是个人 `[SavedProperty]`。
 
 ## 0.3.0-beta 变更（相对 0.2.0-beta）
 

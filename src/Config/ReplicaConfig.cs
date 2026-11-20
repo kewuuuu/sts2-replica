@@ -60,7 +60,7 @@ public sealed class ReplicaConfig
 	{
 		return new ReplicaConfig
 		{
-			ChargeRequired = Math.Max(1, ChargeRequired),
+			ChargeRequired = Math.Max(0, ChargeRequired),
 			OfferCount = Math.Clamp(OfferCount, 1, OfferCountMax),
 			WeightCommon = Math.Clamp(WeightCommon, 0, MaxWeight),
 			WeightUncommon = Math.Clamp(WeightUncommon, 0, MaxWeight),
@@ -104,7 +104,7 @@ public sealed class ReplicaConfig
 			}
 			return new ReplicaConfig
 			{
-				ChargeRequired = Math.Max(1, ReadInt(root, "charge_required", defaults.ChargeRequired)),
+				ChargeRequired = Math.Max(0, ReadInt(root, "charge_required", defaults.ChargeRequired)),
 				OfferCount = Math.Clamp(ReadInt(root, "offer_count", defaults.OfferCount), 1, OfferCountMax),
 				WeightCommon = ReadWeight(root, "weight_common", defaults.WeightCommon),
 				WeightUncommon = ReadWeight(root, "weight_uncommon", defaults.WeightUncommon),

@@ -36,7 +36,8 @@ public sealed class GoodCardReplica : RelicModel
 
 	public override bool ShouldReceiveCombatHooks => false;
 
-	public override bool ShowCounter => true;
+	// A charge-less run (charge_required = 0) has no progress to show; the vanilla-style 0 badge would only confuse.
+	public override bool ShowCounter => ReplicaRuntimeConfig.ForThisRun.ChargeRequired > 0;
 
 	/// <summary>
 	/// Fallback values for the description placeholders, so a failed RelicDescriptionPatch shows numbers

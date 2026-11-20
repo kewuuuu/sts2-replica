@@ -22,7 +22,7 @@
 
 | key | 含义 | 默认 |
 |---|---|---|
-| `charge_required` a | 兑换所需充能 | 3 |
+| `charge_required` a | 兑换所需充能（钳制 `>= 0`；0 = 每次卡牌奖励直接出现【取样】） | 3 |
 | `offer_count` b | 取样给出的候选张数 | 2 |
 | `weight_common` c | 白卡权重 | 6 |
 | `weight_uncommon` d | 蓝卡权重 | 4 |

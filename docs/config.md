@@ -16,7 +16,7 @@
 
 | 键 | 类型 | 默认 | 说明 |
 | --- | --- | --- | --- |
-| `charge_required` | int | 3 | 充能满阈值 a，`< 1` 时回落默认 |
+| `charge_required` | int | 3 | 充能满阈值 a，钳制到 `>= 0`（负值按 0）。**0 = 每次卡牌奖励都能直接取样**，此时不再出现【制模】，充能计数也不再显示 |
 | `offer_count` | int | 2 | 取样候选数量 b，钳制到 1..3。`CardSelectCmd.FromSimpleGridForRewards` 本身没有张数上限（≤3 属于 `FromChooseACardScreen`，本项目未使用），钳制理由是网格选牌 UI 在 b>3 时未经实机验证，属保守值 |
 | `weight_common` | int | 6 | 白卡权重；基础牌算白卡 |
 | `weight_uncommon` | int | 4 | 蓝卡权重 |
@@ -33,7 +33,7 @@
 
 - 文件缺失、非 UTF-8、JSON 非法、根节点不是对象 → **整份默认值**。
 - 单个键类型不对（例如字符串给了数字键）→ 该键用默认值，其余键照常生效。
-- 负权重 → 0；`charge_required` 下限 1；`offer_count` 钳制到 1..3。
+- 负权重 → 0；`charge_required` 钳制到 `>= 0`（0 表示每次奖励都能直接取样）；`offer_count` 钳制到 1..3。
 - 所有 `weight_*` 全为 0 → 退化为等概率抽取（不会出现"永远抽不到"）。
 - 单个档位权重为 0 时，该档位不进入候选池。
 
@@ -49,7 +49,7 @@
 
 | 设置页条目 | 键 | 设置页取值范围 |
 | --- | --- | --- |
-| 充能阈值 a | `charge_required` | 1..20，步进 1 |
+| 充能阈值 a | `charge_required` | 0..20，步进 1（0 = 每次奖励都能直接取样） |
 | 取样候选数 b | `offer_count` | 1..3，步进 1 |
 | 白卡权重 c | `weight_common` | 0..100，步进 1 |
 | 蓝卡权重 d | `weight_uncommon` | 0..100，步进 1 |
@@ -58,7 +58,7 @@
 | 诅咒权重 g | `weight_curse` | 0..100，步进 1 |
 | 开局自带遗物 | `start_with_relic` | 开关 |
 
-滑块上限只是界面取值区间，解析器规则不变（`charge_required` 下限 1、`offer_count` 钳制 1..3、
+滑块上限只是界面取值区间，解析器规则不变（`charge_required` 下限 0、`offer_count` 钳制 1..3、
 权重钳制 0..1000000）。
 
 - 写回的文件：只有 `<游戏可执行文件目录>/mods/config/sts2-replica.cfg` 一个（见开头），目录自动创建。

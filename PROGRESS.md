@@ -117,3 +117,13 @@
 - 发布后发现：页面上正文第二行仍写「模组版本 0.3.0-beta」——那行是 `workshop/description.bbcode:2` 手写的，工具不校验内容。修法是一条护栏而不是再改一次数字：`tools/WorkshopUploader/Program.cs` 新增 `CheckVersionMentions`（从 `<content>/<id>/<id>.json` 读 `version`，正则扫描述里的「模组版本 / mod version」，不一致 `BAD` 并 exit 1），已用故意写旧版本的描述文件验证会拦（`BAD description says mod version 0.3.0-beta but the manifest says 0.3.1-beta`，exit 1）；改动描述版本号后重跑 `--update`，页面正文已更新。
 - 同轮：把 `--update` 实测输出、版本号三处同升、限流 `HTTP 429` 的处理写进 skill `sts2-workshop-publish`。
 
+## 2026-11-20 充能阈值可设 0（v0.4.0-beta）
+
+- 需求（m02119）：把充能层数最低改到 0（即每次卡牌奖励都能直接取样），并上传工坊。
+- 改动：`ReplicaConfig.Parse`/`Normalized` 的 `Math.Max(1, ...)` → `Math.Max(0, ...)`；设置页 `ChargeRequiredMin` 1→0；
+  `GoodCardReplica.ShowCounter` 改为 `ForThisRun.ChargeRequired > 0`（免充能模式不显示永远为 0 的角标）；
+  遗物描述模板补「设为 0 时每次奖励都能直接取样」；`docs/config.md`/`docs/spec.md`/`docs/release.md`/`README.md`/工坊正文与 changelog 同步。
+- 不变：按钮注入仍是"恰好一个"（`GoodCardReplica.cs:104` 的 `Charges >= config.ChargeRequired` 在 0 档恒成立，
+  无可用模板时仍回落【制模】以保持选项数量与本端配置无关）；联机仍房主权威 + 开局冻结；`Charges` 仍是个人 `[SavedProperty]`。
+- 版本：manifest 0.3.1-beta → 0.4.0-beta。
+

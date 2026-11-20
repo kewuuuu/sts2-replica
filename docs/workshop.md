@@ -8,7 +8,7 @@
 |---|---|
 | item id | **3840979834** |
 | URL | https://steamcommunity.com/sharedfiles/filedetails/?id=3840979834 |
-| 当前版本 | 0.3.1-beta |
+| 当前版本 | 0.4.0-beta |
 | 可见性 | public |
 | 首次发布 | 2026-11-17，内容 4 files / 76365 B（`--create`） |
 | 最近一次更新 | 2026-11-19，内容 4 files / 76877 B（`--update 3840979834` 实测通过；同日三次更新：修正正文版本号 → 文案改版分节 → 小标题改用 `[h1]/[h2]`） |

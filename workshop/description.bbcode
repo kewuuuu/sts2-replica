@@ -1,5 +1,5 @@
 [h1]好牌多抓 / Good Card Replica[/h1]
-[i]适用游戏版本：Slay the Spire 2 v0.113.1 · 模组版本 0.3.1-beta[/i]
+[i]适用游戏版本：Slay the Spire 2 v0.113.1 · 模组版本 0.4.0-beta[/i]
 
 好牌多抓！烂牌我抓来干嘛？真是不东尼意思啊，我九死一生打个小怪却只能点跳过。这不公平！现在你可以选择献祭几次卡牌奖励来获取一张卡组中已有的牌。
 
@@ -8,9 +8,9 @@
 
 新增一个遗物「好牌多抓」：
 
-[quote][i]卡牌奖励中可以选择【制模】：放弃本次奖励，为此遗物充能 1 点（3 点充满）。充满后改为【取样】：从牌组中按稀有度加权抽选 2 张候选，自选一张加入牌组，随后清空充能。[/i][/quote]
+[quote][i]卡牌奖励中可以选择【制模】：放弃本次奖励，为此遗物充能 1 点（3 点充满；设为 0 时每次奖励都能直接取样）。充满后改为【取样】：从牌组中按稀有度加权抽选 2 张候选，自选一张加入牌组，随后清空充能。[/i][/quote]
 
-[i]（以上是游戏内遗物描述原文，其中 3 与 2 跟随本局设置，改设置后下一局自动更新。）[/i]
+[i]（以上是游戏内遗物描述原文，其中 3 与 2 跟随本局设置，改设置后下一局自动更新。把 charge_required 设为 0，就不必再制模——每次卡牌奖励都直接出现【取样】。）[/i]
 
 取样拿到的[b]不是"复制品"[/b]：它是一张新卡牌（起点没有升级、没有附魔），但走的是正常卡牌奖励流程 —— 所以照样会走升级判定（蛋类遗物等照常生效），照样能被遗物改成附魔卡。抽到哪张只决定「是哪张牌」，不决定「它长成什么样」。
 
@@ -23,7 +23,7 @@
 
 [table]
 [tr][th]项[/th][th]默认[/th][th]说明[/th][/tr]
-[tr][td]charge_required[/td][td]3[/td][td]攒满几次充能可以取样（也就是要放弃几次卡牌奖励）[/td][/tr]
+[tr][td]charge_required[/td][td]3[/td][td]攒满几次充能可以取样（也就是要放弃几次卡牌奖励）；可设 0..20，0 = 每次卡牌奖励都能直接取样[/td][/tr]
 [tr][td]offer_count[/td][td]2[/td][td]取样时给几张候选[/td][/tr]
 [tr][td]weight_common / uncommon / rare[/td][td]6 / 4 / 2[/td][td]白/蓝/金卡的抽取权重[/td][/tr]
 [tr][td]weight_colorless / curse[/td][td]1 / 3[/td][td]无色卡、诅咒的抽取权重[/td][/tr]
@@ -51,9 +51,9 @@
 
 This mod adds one shared relic, Good Card Replica:
 
-[quote][i]On a card reward screen you may choose [b]Mold[/b]: give up this reward and add 1 charge to this relic (3 charges fill it). Once it is full the choice becomes [b]Sample[/b]: draw 2 rarity-weighted candidates from your deck, pick 1 to add to your deck, and the relic is emptied.[/i][/quote]
+[quote][i]On a card reward screen you may choose [b]Mold[/b]: give up this reward and add 1 charge to this relic (3 charges fill it; set it to 0 and every reward offers [b]Sample[/b] right away). Once it is full the choice becomes [b]Sample[/b]: draw 2 rarity-weighted candidates from your deck, pick 1 to add to your deck, and the relic is emptied.[/i][/quote]
 
-[i](That is the relic's own in-game description; the numbers 3 and 2 follow the run's settings and update on the next run.)[/i]
+[i](That is the relic's own in-game description; the numbers 3 and 2 follow the run's settings and update on the next run. With charge_required = 0 you never need to mold - every card reward offers Sample straight away.)[/i]
 
 What you get is [b]not a copy[/b]: it is a brand new card (no upgrade, no enchantment to start with) that goes through the ordinary card reward pipeline — so it still rolls its upgrade chance (egg relics and the like apply as usual) and other relics can still turn it into an enchanted card. The candidate only decides which card it is, not what it becomes.
 
@@ -65,7 +65,7 @@ With RitsuLib installed, edit them on the in-game mod settings page; otherwise e
 
 [table]
 [tr][th]Option[/th][th]Default[/th][th]Meaning[/th][/tr]
-[tr][td]charge_required[/td][td]3[/td][td]how many charges (i.e. sacrificed card rewards) are needed before you may sample[/td][/tr]
+[tr][td]charge_required[/td][td]3[/td][td]how many charges (i.e. sacrificed card rewards) are needed before you may sample; 0..20, and 0 makes every card reward offer Sample at once[/td][/tr]
 [tr][td]offer_count[/td][td]2[/td][td]how many candidates a sample offers[/td][/tr]
 [tr][td]weight_common / uncommon / rare[/td][td]6 / 4 / 2[/td][td]draw weight of common / uncommon / rare cards[/td][/tr]
 [tr][td]weight_colorless / curse[/td][td]1 / 3[/td][td]draw weight of colorless cards and curses[/td][/tr]
