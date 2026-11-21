@@ -8,11 +8,11 @@
 |---|---|
 | item id | **3840979834** |
 | URL | https://steamcommunity.com/sharedfiles/filedetails/?id=3840979834 |
-| 当前版本 | 0.4.0-beta |
+| 当前版本 | 0.4.1-beta |
 | 可见性 | public |
 | 首次发布 | 2026-11-17，内容 4 files / 76365 B（`--create`） |
-| 最近一次更新 | 2026-11-20，**0.4.0-beta**，内容 4 files / 76877 B（`--update 3840979834`，`EResult k_EResultOK`；页面实测 76.877 KB、正文已显示 0.4.0-beta） |
-| 版本历史 | 0.3.0-beta（2026-11-17 首次 `--create`，4 files / 76365 B）→ 0.3.1-beta（2026-11-19，描述改显示本局数值）→ 0.4.0-beta（2026-11-20，充能阈值可设 0） |
+| 最近一次更新 | 2026-11-21，**0.4.1-beta**，内容 4 files / 76365 B（`--update 3840979834`，`EResult k_EResultOK`；Steam Web API 回 file_size=76365、正文已显示 0.4.1-beta） |
+| 版本历史 | 0.3.0-beta（2026-11-17 首次 `--create`，4 files / 76365 B）→ 0.3.1-beta（2026-11-19，描述改显示本局数值）→ 0.4.0-beta（2026-11-20，充能阈值可设 0）→ 0.4.1-beta（2026-11-21，修 node art 每次启动的报错） |
 
 正文 BBCode 白名单（2026-11-19 实测）：`[h1][h2][h3][b][i][u][hr][list][*][table][quote][url]` 解析；**`[color=#hex]` 不解析**，整对标签会被原样留在页面上（页内 HTML 里根本没有 `style="color`，而 `bb_h1/bb_h2/bb_table/bb_ul` 都正常生成）。要"带颜色的标题"就用 `[h1]/[h2]`，别用 color。核验方式：抓页面 HTML 数 `class="bb_h2"`，再看有没有残留的 `[color` 字面量。
 

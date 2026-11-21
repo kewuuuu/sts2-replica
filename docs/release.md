@@ -1,4 +1,13 @@
-# 发布（最新 0.4.0-beta）
+# 发布（最新 0.4.1-beta）
+
+## 0.4.1-beta 变更（相对 0.4.0-beta）
+
+1. **修掉每次启动刷的一条 node art 报错**：`src/Art/RelicNodeArtPatch.cs` 原先直接读 `__instance.Model`，而
+   `NRelic.Model` 在模型还没挂上时会抛 `InvalidOperationException("Model was accessed before it was set.")`，
+   被该方法自己的 catch 记成 `[ERROR] [sts2-replica] relic node art patch failed: Model was accessed before it was set.`
+   （用户 2026-11-21 日志第 1274 行）。改为 `Traverse.Create(__instance).Field("_model").GetValue<RelicModel>()`
+   加空值判断，与 `NRelic.cs:75-85` 的字段语义一致：模型未挂上时直接返回，不再产生任何日志。
+2. 纯健壮性/日志修复。玩法、设置项、联机线格式（12 字段）与 0.4.0-beta 完全一致，旧 cfg 与旧存档无需改动。
 
 ## 0.4.0-beta 变更（相对 0.3.1-beta）
 

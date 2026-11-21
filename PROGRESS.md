@@ -127,3 +127,10 @@
   无可用模板时仍回落【制模】以保持选项数量与本端配置无关）；联机仍房主权威 + 开局冻结；`Charges` 仍是个人 `[SavedProperty]`。
 - 版本：manifest 0.3.1-beta → 0.4.0-beta。
 
+## 2026-11-21 修 node art 报错（v0.4.1-beta）
+
+- 现象：用户 2026-11-21 的 godot.log 第 1274 行 `[ERROR] [sts2-replica] relic node art patch failed: Model was accessed before it was set.`，每次启动一条。
+- 根因：`src/Art/RelicNodeArtPatch.cs` 的 postfix 首行读 `__instance.Model`，而 `NRelic.cs:85` 的 getter 在 `_model == null` 时抛 `InvalidOperationException("Model was accessed before it was set.")`；`Reload` 会在模型挂上之前被调用。
+- 修法（与狂吼耳环 0.2.1-beta 的同一处修复对齐）：`Traverse.Create(__instance).Field("_model").GetValue<RelicModel>()` 后 `is not GoodCardReplica` 直接 return。
+- 版本：manifest 0.4.0-beta → 0.4.1-beta；玩法/设置/联机线格式不变。
+
