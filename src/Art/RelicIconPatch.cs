@@ -1,7 +1,5 @@
-using System.Threading;
 using Godot;
 using HarmonyLib;
-using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
 using Sts2Replica.Models;
 
@@ -18,11 +16,8 @@ namespace Sts2Replica.Art;
 [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.Icon), MethodType.Getter)]
 internal static class RelicIconPatch
 {
-	private static int _probe;
-
 	private static void Postfix(RelicModel __instance, ref Texture2D __result)
 	{
-		Note(__instance, __result);
 		if (__instance is not GoodCardReplica)
 		{
 			return;
@@ -32,27 +27,6 @@ internal static class RelicIconPatch
 		{
 			__result = texture;
 		}
-	}
-
-	/// <summary>First eight calls only: names the types/ids the UI actually asks for and what the vanilla chain returned.</summary>
-	private static void Note(RelicModel model, Texture2D? incoming)
-	{
-		int index = Interlocked.Increment(ref _probe);
-		if (index > 8)
-		{
-			return;
-		}
-		string entry;
-		try
-		{
-			entry = model.Id.Entry;
-		}
-		catch
-		{
-			entry = "?";
-		}
-		string source = incoming == null ? "null" : (incoming.ResourcePath.Length > 0 ? incoming.ResourcePath : incoming.GetType().Name);
-		Log.Info("[sts2-replica] Icon getter #" + index + " type=" + model.GetType().FullName + " id=" + entry + " vanilla=" + source);
 	}
 }
 
