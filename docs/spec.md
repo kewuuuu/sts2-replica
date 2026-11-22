@@ -9,14 +9,17 @@
 | 状态 | 按钮 | 行为 | afterSelected |
 |---|---|---|---|
 | 充能 < a | 【制模】 | 放弃本次卡牌奖励，遗物充能 +1 | `EndSelectionAndCompleteReward` |
-| 充能 ≥ a | 【取样】 | 清空充能 → 从卡组按权重抽 b 张 → 选 1 张 → **按奖励路径获得一张同名新卡** | `EndSelectionAndCompleteReward` |
+| 充能 ≥ a | 【取样】 | 从卡组按权重抽 b 张 → 选至多 p 张（p 见下）→ **按奖励路径获得同名新卡**；每张扣 a 层充能，余额保留 | `EndSelectionAndCompleteReward` |
 
 - **取样语义（用户 m00271 澄清，勿回退成克隆）**：不是"复制卡组里那张牌"，而是**让卡牌奖励里出现一张与卡组中某张牌同名的牌**，并照常走奖励流程：
   - 候选卡 = 该牌的规范模板经 `RunState.CreateCard(template, player)` 新建的**新实例**（因此天然不继承原牌的升级与附魔）；
   - 升级照常按**卡牌奖励的升级判定**滚动（`CardFactory.RollForUpgrade`，受 `Hook.ModifyCardRewardUpgradeOdds` 影响），并允许其他遗物的改造效果作用其上；
   - 选中后走**普通卡牌奖励拿牌**的路径发放（`CardPileCmd.Add` + `RewardSynchronizer.SyncLocalObtainedCard`），确保"获得卡牌"类遗物钩子正常触发。
 - 与卡牌奖励**互斥**：按钮触发即完成本次奖励，不再给出原版 3 张随机牌。
-- 候选以 `CardCreationResult` 列表呈现，用 `CardSelectCmd.FromSimpleGridForRewards` 选 1（该命令内部自带多人选择同步）；玩家取消时充能**退还**。
+- 候选以 `CardCreationResult` 列表呈现，用 `CardSelectCmd.FromSimpleGridForRewards` 做成「选 0..p 张」（该命令内部自带
+  多人选择同步；`min=0 != max=p` 强制手动确认，多选网格的原版先例是 `SeaGlass.cs:89`）。
+  p = `min(sample_picks, 候选张数, floor(充能 / a))`，a = 0 时不做除法；取 n 张扣 a×n 层充能（a = 0 时充能保持 0），
+  余额保留（0.4.x 及以前固定清 0）。玩家取消（选 0 张后确认或关掉界面）时充能**退还**；任一张入牌组失败同样退还。
 
 ## 2. 可配置项（默认值）
 
@@ -24,6 +27,7 @@
 |---|---|---|
 | `charge_required` a | 兑换所需充能（钳制 `>= 0`；0 = 每次卡牌奖励直接出现【取样】） | 3 |
 | `offer_count` b | 取样给出的候选张数 | 2 |
+| `sample_picks` p | 一次取样**最多**拿几张（真实张数 = min(p, 候选数, floor(充能/a))），钳制 1..3 | 1 |
 | `weight_common` c | 白卡权重 | 6 |
 | `weight_uncommon` d | 蓝卡权重 | 4 |
 | `weight_rare` e | 金卡权重 | 2 |
@@ -54,7 +58,8 @@
 ## 5. 验收点（beta）
 
 1. 装进 `mods/` 后游戏能加载，无 Harmony 补丁冲突报错。
-2. 持遗物时卡牌奖励屏出现【制模】；连点 a 次后同一位置变【取样】；取样出 b 张候选、只能选 1、充能清零；候选是新实例（起点无升级/附魔），但**奖励升级判定与遗物改造仍可作用于它**（这是与「克隆」的关键区别）。
+2. 持遗物时卡牌奖励屏出现【制模】；连点 a 次后同一位置变【取样】；取样出 b 张候选、可选至多 p 张、每张扣 a 层充能
+   （余额保留）、取消或入牌组失败则充能不变；候选是新实例（起点无升级/附魔），但**奖励升级判定与遗物改造仍可作用于它**（这是与「克隆」的关键区别）。
 3. 未持遗物时界面与行为与原版完全一致。
 4. 同时持有 Driftwood / PaelsWing 时不抛 "More than 2 card reward alternatives"（本模组按钮让位、消失，属预期）。
 5. 设置改成 a=1/b=3 等极端值不崩，权重全 0 时有安全兜底（退回等概率或取消按钮）。
@@ -70,12 +75,12 @@
    `src/Integration/RitsuLibSettingsPage.cs`。
 3. **房主配置越界 → 钳制 + WARN，不拒绝开局**：`ReplicaConfig.Normalized()` 只在网络入口使用，`Parse` 行为不变。
    实现：`src/Config/ReplicaConfig.cs`、`src/Net/ReplicaConfigSync.cs`。
-4. **两端各一行配置指纹**：`Fingerprint()` 输出 `a=… b=… w=…/…/…/…/… start=… basic=… status=… quest=… dedupe=… h=<FNV-1a 32>`；
+4. **两端各一行配置指纹**：`Fingerprint()` 输出 `a=… b=… p=… w=…/…/…/…/… start=… basic=… status=… quest=… dedupe=… h=<FNV-1a 32>`；
    房主广播时、客户端采纳时、单人局跳过时各打一次。实现：`src/Config/ReplicaRuntimeConfig.cs`。
-5. **充能不同步**：`Charges` 仍是个人 `[SavedProperty]`，同步的只有 12 个配置字段。
+5. **充能不同步**：`Charges` 仍是个人 `[SavedProperty]`，同步的只有 13 个配置字段。
    实现：`src/Models/GoodCardReplica.cs`（v0.3 起改读 `ForThisRun` 的本局快照，充能逻辑不变）。
 
-消息与接线：`src/Net/ReplicaConfigMessage.cs`（房主→客户端，12 字段，Reliable/Info）、
+消息与接线：`src/Net/ReplicaConfigMessage.cs`（房主→客户端，13 字段，Reliable/Info）、
 `src/Net/ReplicaConfigRequestMessage.cs`（客户端→房主，空载荷，Reliable/VeryDebug）、
 `src/Net/ReplicaConfigSync.cs`（按 `INetGameService` 实例幂等注册；单人/回放直接跳过；房主收到请求再广播一次）。
 时序假设：`RunStarted` 在读档时也触发，所以中途加入复用同一路径；客户端的 `start_with_relic` 发放被推迟到

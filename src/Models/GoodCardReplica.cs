@@ -47,7 +47,8 @@ public sealed class GoodCardReplica : RelicModel
 	protected override IEnumerable<DynamicVar> CanonicalVars => new DynamicVar[]
 	{
 		new DynamicVar("Charges", ReplicaRuntimeConfig.Effective.ChargeRequired),
-		new DynamicVar("Options", ReplicaRuntimeConfig.Effective.OfferCount)
+		new DynamicVar("Options", ReplicaRuntimeConfig.Effective.OfferCount),
+		new DynamicVar("Picks", ReplicaRuntimeConfig.Effective.SamplePicks)
 	};
 
 	public override int DisplayAmount => _charges;
@@ -133,10 +134,20 @@ public sealed class GoodCardReplica : RelicModel
 				Charges = previous;
 				return;
 			}
+			int maxPicks = MaxPicks(config, previous, candidates.Count);
+			if (maxPicks < 1)
+			{
+				// The button is only injected while one sample is affordable, so this cannot happen through
+				// the reward screen; opening a 0-slot grid would only cancel itself, so keep the charge.
+				Charges = previous;
+				Log.Error("[sts2-replica] sampling requested with no affordable charge; nothing was offered");
+				return;
+			}
 			LocString prompt = new LocString("relics", base.Id.Entry + ".selectionScreenPrompt");
-			// min 0 / max 1 keeps the "pick exactly one, or cancel and get the charge back" contract:
-			// min != max forces manual confirmation (CardSelectorPrefs.cs), Cancelable mirrors CardUpgradeReward.cs:46.
-			CardSelectorPrefs prefs = new CardSelectorPrefs(prompt, 0, 1)
+			// min 0 / max maxPicks keeps the "take up to maxPicks, or cancel and get the charge back" contract:
+			// min != max forces manual confirmation (CardSelectorPrefs.cs:79), so the confirm button is what
+			// ends the choice, and SeaGlass.cs:89 is the vanilla precedent for a multi-select grid.
+			CardSelectorPrefs prefs = new CardSelectorPrefs(prompt, 0, maxPicks)
 			{
 				Cancelable = true
 			};
@@ -147,6 +158,12 @@ public sealed class GoodCardReplica : RelicModel
 			{
 				Charges = previous;
 				return;
+			}
+			if (picked.Count > maxPicks)
+			{
+				// The grid stops at MaxSelect; this only keeps the charge arithmetic from paying for cards
+				// the player could not have selected.
+				picked = picked.Take(maxPicks).ToList();
 			}
 			foreach (CardModel card in picked)
 			{
@@ -161,11 +178,40 @@ public sealed class GoodCardReplica : RelicModel
 				}
 				CardCmd.PreviewCardPileAdd(added);
 			}
+			Charges = RemainingCharges(config, previous, picked.Count);
 		}
 		catch (Exception exception)
 		{
 			Charges = previous;
 			Log.Error("[sts2-replica] sampling failed: " + exception);
 		}
+	}
+
+	/// <summary>
+	/// How many cards one sample may take: the configured cap, the number of candidates, and what the
+	/// charge pays for. <c>charge_required = 0</c> is the free mode and skips the division.
+	/// </summary>
+	private static int MaxPicks(ReplicaConfig config, int charges, int candidateCount)
+	{
+		int picks = Math.Min(config.SamplePicks, candidateCount);
+		if (config.ChargeRequired > 0)
+		{
+			picks = Math.Min(picks, charges / config.ChargeRequired);
+		}
+		return Math.Max(0, picks);
+	}
+
+	/// <summary>
+	/// The charge left after taking <paramref name="taken"/> cards: one <c>charge_required</c> per card, so
+	/// an extra card costs an extra charge. Free mode keeps the counter cleared to 0, as it was before
+	/// multi-pick.
+	/// </summary>
+	private static int RemainingCharges(ReplicaConfig config, int previous, int taken)
+	{
+		if (config.ChargeRequired <= 0)
+		{
+			return 0;
+		}
+		return Math.Max(0, previous - config.ChargeRequired * taken);
 	}
 }

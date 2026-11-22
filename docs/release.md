@@ -1,4 +1,22 @@
-# 发布（最新 0.4.1-beta）
+# 发布（最新 0.5.0-beta）
+
+## 0.5.0-beta 变更（相对 0.4.1-beta）
+
+1. **一次取样可以拿多张**：新配置键 `sample_picks`（int，1..3，默认 1）。可拿张数 =
+   `min(sample_picks, 本次候选张数, floor(充能 / charge_required))`（`charge_required <= 0` 时不做除法，视为免费）；
+   取 n 张扣 `charge_required × n` 层充能，**余额保留**（0.4.x 及以前固定清 0）；取消选择或任一张入牌组失败
+   （`success=false`）时充能退回取样前的值。张数用 `ReplicaRuntimeConfig.ForThisRun`（开局冻结值）计算，
+   所以联机两端一致；`CardRewardAlternative` 的注入条件未动（SAMPLE/MOLD 仍只看充能与候选）。
+   实现见 `src/Models/GoodCardReplica.cs` 的 `OnSample` / `MaxPicks` / `RemainingCharges`。
+2. **选牌界面改成多选**：`CardSelectorPrefs(prompt, 0, maxPicks)` —— `min != max` 会强制手动确认
+   （`CardSelectorPrefs.cs:79`），选完点确认；多选网格的原版先例是 `SeaGlass.cs:89`。
+3. **遗物描述新增 `{Picks}`**：文案补「一次最多可拿 {Picks} 张，每多拿一张额外消耗 {Charges} 层充能；
+   取消选择则充能不变」（`src/Localization/ReplicaLoc.cs`、`src/Models/RelicDescriptionPatch.cs`）。
+4. **设置页第 9 项**：`sample_picks` 滑块 1..3（`src/Integration/RitsuLibSettingsPage.cs`），`DraftConfig`
+   同步带过该字段。
+5. **联机线格式第 13 字段**：`ReplicaConfigMessage` 的 `sample_picks` **追加在尾部**，0.4.x 客户端仍读前 12 个值；
+   配置指纹正文新增 `p=`（`a=… b=… p=… w=… …`），`SameValues` 同步比较该键。旧 cfg 缺 `sample_picks` 时回落默认 1。
+6. `mod/sts2-replica.json` 版本 → `0.5.0-beta`（握手比 `id-version`，两端要一起换）。
 
 ## 0.4.1-beta 变更（相对 0.4.0-beta）
 
@@ -113,7 +131,7 @@ dist/sts2-replica-0.3.0-beta.zip
 
 ## 多人联机
 
-**配置跟着房主走**（v0.2 起，v0.3 起冻结）：模组参数（`charge_required` / `offer_count` / 五档权重 /
+**配置跟着房主走**（v0.2 起，v0.3 起冻结）：模组参数（`charge_required` / `offer_count` / `sample_picks` / 五档权重 /
 `start_with_relic` / 三个过滤开关 / `dedupe`）在联机局里以**房主**为准，客户端只在内存里采纳房主的数值，
 **不会改写客户端本机的 `sts2-replica.cfg`**。两端都在**开局那一刻**冻结这组参数（`ForThisRun`），
 所以房主局内改设置不影响正在进行的那一局，只影响之后创建的对局。充能（`Charges`）仍是玩家个人的，不参与同步。
@@ -147,7 +165,7 @@ dist/sts2-replica-0.3.0-beta.zip
 
 | 消息 | 方向 | 载荷 | Mode / LogLevel |
 | --- | --- | --- | --- |
-| `ReplicaConfigMessage` | 房主 → 客户端 | 12 个配置字段 | Reliable / Info |
+| `ReplicaConfigMessage` | 房主 → 客户端 | 13 个配置字段（`sample_picks` 在尾部） | Reliable / Info |
 | `ReplicaConfigRequestMessage` | 客户端 → 房主 | 无 | Reliable / VeryDebug |
 
 - 方向语义直接来自 `INetGameService.SendMessage<T>(T)`：客户端发只到房主，房主发广播给所有客户端
@@ -169,13 +187,13 @@ dist/sts2-replica-0.3.0-beta.zip
 ```
 [sts2-replica] message type ReplicaConfigMessage id=NN
 [sts2-replica] message type ReplicaConfigRequestMessage id=NN
-[sts2-replica] host: broadcast config a=3 b=2 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
-[sts2-replica] adopting host config from player 7656119…: a=3 b=2 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
+[sts2-replica] host: broadcast config a=3 b=2 p=1 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
+[sts2-replica] adopting host config from player 7656119…: a=3 b=2 p=1 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
 [sts2-replica] client: asked the host for its config
-[sts2-replica] singleplayer: settings stay local; a=3 b=2 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
+[sts2-replica] singleplayer: settings stay local; a=3 b=2 p=1 w=6/4/2/1/3 start=0 basic=1 status=0 quest=0 dedupe=1 h=1a2b3c4d
 ```
 
-指纹格式固定：`a` = `charge_required`，`b` = `offer_count`，`w` = 白/蓝/金/无色/诅咒五档权重，
+指纹格式固定：`a` = `charge_required`，`b` = `offer_count`，`p` = `sample_picks`，`w` = 白/蓝/金/无色/诅咒五档权重，
 `start`/`basic`/`status`/`quest`/`dedupe` 是 0/1 开关，`h` 是这串正文的 FNV-1a 32 位（十六进制，
 不用 `string.GetHashCode`：它按进程随机化，两台机器永远对不上）。
 

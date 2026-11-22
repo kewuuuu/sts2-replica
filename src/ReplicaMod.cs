@@ -36,6 +36,7 @@ public static class ReplicaMod
         Log.Info("[sts2-replica] initialized; GoodCardReplica queued for SharedRelicPool, "
             + "charge_required=" + config.ChargeRequired
             + ", offer_count=" + config.OfferCount
+            + ", sample_picks=" + config.SamplePicks
             + ", start_with_relic=" + config.StartWithRelic);
         Log.Info("[sts2-replica] local config fingerprint " + ReplicaRuntimeConfig.Fingerprint(config));
     }

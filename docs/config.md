@@ -18,6 +18,7 @@
 | --- | --- | --- | --- |
 | `charge_required` | int | 3 | 充能满阈值 a，钳制到 `>= 0`（负值按 0）。**0 = 每次卡牌奖励都能直接取样**，此时不再出现【制模】，充能计数也不再显示 |
 | `offer_count` | int | 2 | 取样候选数量 b，钳制到 1..3。`CardSelectCmd.FromSimpleGridForRewards` 本身没有张数上限（≤3 属于 `FromChooseACardScreen`，本项目未使用），钳制理由是网格选牌 UI 在 b>3 时未经实机验证，属保守值 |
+| `sample_picks` | int | 1 | 一次取样**最多**拿几张，钳制到 1..3。实际张数还受候选数与充能限制（见下「一次取样拿几张」）；每多拿一张多花 `charge_required` 层充能 |
 | `weight_common` | int | 6 | 白卡权重；基础牌算白卡 |
 | `weight_uncommon` | int | 4 | 蓝卡权重 |
 | `weight_rare` | int | 2 | 金卡权重 |
@@ -29,11 +30,46 @@
 | `include_quest` | bool | false | 任务牌是否进池（权重用 `weight_common`） |
 | `dedupe` | bool | true | 同名卡牌在候选池中只保留一张 |
 
+## 示例（全部 13 个键）
+
+```json
+{
+  "charge_required": 3,
+  "offer_count": 2,
+  "sample_picks": 1,
+  "weight_common": 6,
+  "weight_uncommon": 4,
+  "weight_rare": 2,
+  "weight_colorless": 1,
+  "weight_curse": 3,
+  "start_with_relic": false,
+  "include_basic": true,
+  "include_status": false,
+  "include_quest": false,
+  "dedupe": true
+}
+```
+
+## 一次取样拿几张（0.5.0 起）
+
+`sample_picks` 只是上限，不是保证，实际张数按下面这条式子算（充能取**取样前**的层数）：
+
+```
+实际张数 = min(sample_picks, 本次候选张数, floor(充能 / charge_required))
+```
+
+- `charge_required <= 0`（免充能模式）不做除法，实际张数 = `min(sample_picks, 候选张数)`，充能保持 0。
+- 取完后扣 `charge_required × 实际张数`：拿 n 张就花 n 份充能。**余额保留**——5 层、`charge_required=3`、拿 1 张后
+  剩 2 层（下次得再制模一次才够）。0.4.x 及以前固定清 0。
+- 取消选择（选 0 张后确认，或直接关掉界面）→ 充能退回取样前的值。
+- 任何一张入牌组失败（`success=false`）→ 充能同样退回取样前的值（沿用 0.4.x 的防御）。
+- 候选张数由 `offer_count` 决定且 ≤3，所以一次最多也就 3 张。
+
 ## 容错规则
 
 - 文件缺失、非 UTF-8、JSON 非法、根节点不是对象 → **整份默认值**。
 - 单个键类型不对（例如字符串给了数字键）→ 该键用默认值，其余键照常生效。
-- 负权重 → 0；`charge_required` 钳制到 `>= 0`（0 表示每次奖励都能直接取样）；`offer_count` 钳制到 1..3。
+- 负权重 → 0；`charge_required` 钳制到 `>= 0`（0 表示每次奖励都能直接取样）；`offer_count` 与 `sample_picks` 都钳制到 1..3。
 - 所有 `weight_*` 全为 0 → 退化为等概率抽取（不会出现"永远抽不到"）。
 - 单个档位权重为 0 时，该档位不进入候选池。
 
@@ -45,12 +81,13 @@
 ## 游戏内设置页（RitsuLib，可选）
 
 装了 [RitsuLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295) 时，RitsuLib 的设置界面里会多出
-「好牌多抓」一页（注册键 `mod_id=sts2-replica`、`page_id=replica-settings`），可直接改这 8 个键：
+「好牌多抓」一页（注册键 `mod_id=sts2-replica`、`page_id=replica-settings`），可直接改这 9 个键：
 
 | 设置页条目 | 键 | 设置页取值范围 |
 | --- | --- | --- |
 | 充能阈值 a | `charge_required` | 0..20，步进 1（0 = 每次奖励都能直接取样） |
 | 取样候选数 b | `offer_count` | 1..3，步进 1 |
+| 一次取样张数 | `sample_picks` | 1..3，步进 1 |
 | 白卡权重 c | `weight_common` | 0..100，步进 1 |
 | 蓝卡权重 d | `weight_uncommon` | 0..100，步进 1 |
 | 金卡权重 e | `weight_rare` | 0..100，步进 1 |
@@ -62,7 +99,7 @@
 权重钳制 0..1000000）。
 
 - 写回的文件：只有 `<游戏可执行文件目录>/mods/config/sts2-replica.cfg` 一个（见开头），目录自动创建。
-- 写回内容是全部 12 个键，所以设置页没暴露的 4 个过滤开关（`include_basic` / `include_status` /
+- 写回内容是全部 13 个键，所以设置页没暴露的 4 个过滤开关（`include_basic` / `include_status` /
   `include_quest` / `dedupe`）按当前内存值原样保留，不会因为点了一次滑块被重置。
 - 多久生效：**从下一局开始生效**。参数在开局时冻结成一份本局快照，玩法只读这份快照
   （`ReplicaRuntimeConfig.ForThisRun`：有快照用快照，没有才回落 `Effective`）；`GoodCardReplica` 的

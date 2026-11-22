@@ -120,6 +120,7 @@ public static class ReplicaRuntimeConfig
 	{
 		string body = "a=" + config.ChargeRequired
 			+ " b=" + config.OfferCount
+			+ " p=" + config.SamplePicks
 			+ " w=" + config.WeightCommon + "/" + config.WeightUncommon + "/" + config.WeightRare + "/" + config.WeightColorless + "/" + config.WeightCurse
 			+ " start=" + Bit(config.StartWithRelic)
 			+ " basic=" + Bit(config.IncludeBasic)
@@ -133,6 +134,7 @@ public static class ReplicaRuntimeConfig
 	{
 		return left.ChargeRequired == right.ChargeRequired
 			&& left.OfferCount == right.OfferCount
+			&& left.SamplePicks == right.SamplePicks
 			&& left.WeightCommon == right.WeightCommon
 			&& left.WeightUncommon == right.WeightUncommon
 			&& left.WeightRare == right.WeightRare

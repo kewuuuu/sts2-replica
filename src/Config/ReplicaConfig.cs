@@ -14,8 +14,14 @@ public sealed class ReplicaConfig
 	/// its own; 1..3 is kept because the grid selection UI with more than three offers is unverified in game.
 	/// </summary>
 	public const int OfferCountMax = 3;
+	/// <summary>
+	/// Upper bound for how many candidates one sample may take. The candidate list itself is capped at
+	/// <see cref="OfferCountMax"/>, so 1..3 cannot exceed what the grid can offer.
+	/// </summary>
+	public const int SamplePicksMax = 3;
 	public const int DefaultChargeRequired = 3;
 	public const int DefaultOfferCount = 2;
+	public const int DefaultSamplePicks = 1;
 	public const int DefaultWeightCommon = 6;
 	public const int DefaultWeightUncommon = 4;
 	public const int DefaultWeightRare = 2;
@@ -26,6 +32,9 @@ public sealed class ReplicaConfig
 	public int ChargeRequired { get; init; } = DefaultChargeRequired;
 
 	public int OfferCount { get; init; } = DefaultOfferCount;
+
+	/// <summary>How many candidates one sample may take at most; the charge pays for each card taken.</summary>
+	public int SamplePicks { get; init; } = DefaultSamplePicks;
 
 	public int WeightCommon { get; init; } = DefaultWeightCommon;
 
@@ -62,6 +71,7 @@ public sealed class ReplicaConfig
 		{
 			ChargeRequired = Math.Max(0, ChargeRequired),
 			OfferCount = Math.Clamp(OfferCount, 1, OfferCountMax),
+			SamplePicks = Math.Clamp(SamplePicks, 1, SamplePicksMax),
 			WeightCommon = Math.Clamp(WeightCommon, 0, MaxWeight),
 			WeightUncommon = Math.Clamp(WeightUncommon, 0, MaxWeight),
 			WeightRare = Math.Clamp(WeightRare, 0, MaxWeight),
@@ -106,6 +116,7 @@ public sealed class ReplicaConfig
 			{
 				ChargeRequired = Math.Max(0, ReadInt(root, "charge_required", defaults.ChargeRequired)),
 				OfferCount = Math.Clamp(ReadInt(root, "offer_count", defaults.OfferCount), 1, OfferCountMax),
+				SamplePicks = Math.Clamp(ReadInt(root, "sample_picks", defaults.SamplePicks), 1, SamplePicksMax),
 				WeightCommon = ReadWeight(root, "weight_common", defaults.WeightCommon),
 				WeightUncommon = ReadWeight(root, "weight_uncommon", defaults.WeightUncommon),
 				WeightRare = ReadWeight(root, "weight_rare", defaults.WeightRare),

@@ -26,5 +26,6 @@ internal static class RelicDescriptionPatch
 		ReplicaConfig config = ReplicaRuntimeConfig.ForThisRun;
 		__result.Add("Charges", (decimal)config.ChargeRequired);
 		__result.Add("Options", (decimal)config.OfferCount);
+		__result.Add("Picks", (decimal)config.SamplePicks);
 	}
 }

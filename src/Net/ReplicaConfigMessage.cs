@@ -16,6 +16,8 @@ public class ReplicaConfigMessage : INetMessage, IPacketSerializable
 
 	public int OfferCount { get; set; }
 
+	public int SamplePicks { get; set; }
+
 	public int WeightCommon { get; set; }
 
 	public int WeightUncommon { get; set; }
@@ -55,6 +57,7 @@ public class ReplicaConfigMessage : INetMessage, IPacketSerializable
 		{
 			ChargeRequired = config.ChargeRequired,
 			OfferCount = config.OfferCount,
+			SamplePicks = config.SamplePicks,
 			WeightCommon = config.WeightCommon,
 			WeightUncommon = config.WeightUncommon,
 			WeightRare = config.WeightRare,
@@ -74,6 +77,7 @@ public class ReplicaConfigMessage : INetMessage, IPacketSerializable
 		{
 			ChargeRequired = ChargeRequired,
 			OfferCount = OfferCount,
+			SamplePicks = SamplePicks,
 			WeightCommon = WeightCommon,
 			WeightUncommon = WeightUncommon,
 			WeightRare = WeightRare,
@@ -90,6 +94,8 @@ public class ReplicaConfigMessage : INetMessage, IPacketSerializable
 	public void Serialize(PacketWriter writer)
 	{
 		// The order below is the wire format: append only, and keep Deserialize in step with it.
+		// sample_picks is the 0.5.0 field and therefore sits at the very end: a 0.4.x peer reads the
+		// first twelve values exactly as before and simply never sees this one.
 		writer.WriteInt(ChargeRequired);
 		writer.WriteInt(OfferCount);
 		writer.WriteInt(WeightCommon);
@@ -102,6 +108,7 @@ public class ReplicaConfigMessage : INetMessage, IPacketSerializable
 		writer.WriteBool(IncludeStatus);
 		writer.WriteBool(IncludeQuest);
 		writer.WriteBool(Dedupe);
+		writer.WriteInt(SamplePicks);
 	}
 
 	public void Deserialize(PacketReader reader)
@@ -118,5 +125,6 @@ public class ReplicaConfigMessage : INetMessage, IPacketSerializable
 		IncludeStatus = reader.ReadBool();
 		IncludeQuest = reader.ReadBool();
 		Dedupe = reader.ReadBool();
+		SamplePicks = reader.ReadInt();
 	}
 }

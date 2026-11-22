@@ -8,7 +8,7 @@ using Sts2Replica.Config;
 namespace Sts2Replica.Integration;
 
 /// <summary>
-/// 把 <see cref="ReplicaConfig"/> 里玩家可调的 8 个键注册成 RitsuLib 设置界面里的一页。
+/// 把 <see cref="ReplicaConfig"/> 里玩家可调的 9 个键注册成 RitsuLib 设置界面里的一页。
 /// 只有 csproj 打开 EnableRitsuLib 时才参与编译；运行期还要 RitsuLib 程序集确实加载了才会注册，
 /// 任何失败都被 <see cref="TryRegister"/> 挡成一条警告，模组其余部分不受影响。
 /// </summary>
@@ -96,6 +96,15 @@ internal static class RitsuLibSettingsPage
                 1,
                 value => value.ToString(),
                 ModSettingsText.Literal("【取样】一次给出多少张候选。上限 3 与 JSON 配置的钳制一致。"));
+            section.AddIntSlider(
+                "sample_picks",
+                ModSettingsText.Literal("一次取样张数"),
+                IntBinding("sample_picks", () => ReplicaRuntimeConfig.Effective.SamplePicks, (target, value) => target.SamplePicks = value),
+                1,
+                ReplicaConfig.SamplePicksMax,
+                1,
+                value => value.ToString(),
+                ModSettingsText.Literal("【取样】一次最多拿几张（1..3）。实际张数还受候选数与充能限制：每拿一张花 a 层充能。"));
             section.AddIntSlider(
                 "weight_common",
                 ModSettingsText.Literal("白卡权重 c"),
@@ -208,7 +217,7 @@ internal static class RitsuLibSettingsPage
     }
 
     /// <summary>
-    /// 设置页的候选配置：8 个可玩项可变，另外 4 个过滤开关从生效配置原样带过，
+    /// 设置页的候选配置：9 个可玩项可变，另外 4 个过滤开关从生效配置原样带过，
     /// 写回时合成完整的 <see cref="ReplicaConfig"/>，不会丢键。
     /// </summary>
     private sealed class DraftConfig
@@ -217,6 +226,7 @@ internal static class RitsuLibSettingsPage
         {
             ChargeRequired = source.ChargeRequired;
             OfferCount = source.OfferCount;
+            SamplePicks = source.SamplePicks;
             WeightCommon = source.WeightCommon;
             WeightUncommon = source.WeightUncommon;
             WeightRare = source.WeightRare;
@@ -232,6 +242,8 @@ internal static class RitsuLibSettingsPage
         public int ChargeRequired { get; set; }
 
         public int OfferCount { get; set; }
+
+        public int SamplePicks { get; set; }
 
         public int WeightCommon { get; set; }
 
@@ -259,6 +271,7 @@ internal static class RitsuLibSettingsPage
             {
                 ChargeRequired = ChargeRequired,
                 OfferCount = OfferCount,
+                SamplePicks = SamplePicks,
                 WeightCommon = WeightCommon,
                 WeightUncommon = WeightUncommon,
                 WeightRare = WeightRare,

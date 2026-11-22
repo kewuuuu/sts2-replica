@@ -134,3 +134,14 @@
 - 修法（与狂吼耳环 0.2.1-beta 的同一处修复对齐）：`Traverse.Create(__instance).Field("_model").GetValue<RelicModel>()` 后 `is not GoodCardReplica` 直接 return。
 - 版本：manifest 0.4.0-beta → 0.4.1-beta；玩法/设置/联机线格式不变。
 
+
+## 2026-11-22 一次取样可多拿（v0.5.0-beta）
+
+- 需求（用户）：设置里能定「一次取样最多拿几张」。
+- 新键 `sample_picks`（int，1..3，默认 1），钳制在 `ReplicaConfig.Normalized`/`Parse`，写盘、指纹（`p=` 段）、`SameValues`、联机消息（**尾部追加**，0.4.x 对端只读前 12 个值）、RitsuLib 设置页（1..3 滑块 + DraftConfig）同步。
+- 可拿张数 `GoodCardReplica.MaxPicks`：`min(sample_picks, 候选数, floor(充能 / charge_required))`，`charge_required <= 0` 不做除法。
+- 计费 `GoodCardReplica.RemainingCharges`：取完扣 `charge_required × 实拿张数`，余额保留（0.4.x 是固定清 0）；取消或任一 `success=false` 退回取样前层数。
+- 选牌：`CardSelectorPrefs(prompt, 0, maxPicks)`（min≠max 强制确认按钮，与 `SeaGlass.cs:89` 同型），提示文案带 `{MaxCount}`；遗物描述新增 `{Picks}` 与「每多拿一张额外消耗 {Charges} 层充能」。
+- 按钮注入条件不变（`Charges >= ChargeRequired` + 恰好注入一个选项），否则两端下标会错位。
+- 验收：build 0 警告 0 错误（dll 68096 B）；装进 mods 后无头启动 exit=0，日志 `initialized; … sample_picks=1 …` 与指纹 `a=0 b=3 p=1 …`；dll 内 UTF-16 命中 `sample_picks`/`{Picks}`/`最多 {MaxCount} 张`/`每多拿一张`。
+- 版本：manifest 0.4.1-beta → 0.5.0-beta。

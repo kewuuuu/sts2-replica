@@ -127,7 +127,7 @@ public static class ReplicaConfigStore
 	}
 
 	/// <summary>
-	/// 序列化全部 12 个键（8 个可玩项 + 4 个过滤开关），键名与 <see cref="ReplicaConfig.Parse"/> 一一对应。
+	/// 序列化全部 13 个键（9 个可玩项 + 4 个过滤开关），键名与 <see cref="ReplicaConfig.Parse"/> 一一对应。
 	/// </summary>
 	private static string Serialize(ReplicaConfig config)
 	{
@@ -138,6 +138,7 @@ public static class ReplicaConfigStore
 				writer.WriteStartObject();
 				writer.WriteNumber("charge_required", config.ChargeRequired);
 				writer.WriteNumber("offer_count", config.OfferCount);
+				writer.WriteNumber("sample_picks", config.SamplePicks);
 				writer.WriteNumber("weight_common", config.WeightCommon);
 				writer.WriteNumber("weight_uncommon", config.WeightUncommon);
 				writer.WriteNumber("weight_rare", config.WeightRare);
